@@ -71,7 +71,12 @@ def cmd_train(args: argparse.Namespace) -> int:
 def cmd_eval(args: argparse.Namespace) -> int:
     from almendra.eval import evaluate
 
-    evaluate.run(_compose(args.overrides), checkpoint=args.checkpoint, split=args.split)
+    evaluate.run(
+        _compose(args.overrides),
+        checkpoint=args.checkpoint,
+        split=args.split,
+        views=args.views,
+    )
     return 0
 
 
@@ -154,6 +159,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval = sub.add_parser("eval", help="evaluate a checkpoint")
     p_eval.add_argument("--checkpoint", help="path to a checkpoint (.pt)")
     p_eval.add_argument("--split", default="test", help="dataset split (default: test)")
+    p_eval.add_argument(
+        "--views", type=int, help="evaluate at this view count (overrides the config)"
+    )
     p_eval.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
     p_eval.set_defaults(func=cmd_eval)
 

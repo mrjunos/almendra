@@ -1,0 +1,14 @@
+# @package model
+# Multi-view variant of the baseline backbone (Phase 2).
+# Run with pseudo-views on single-view data:
+#   almendra train model=mobilenetv3_small_mv data.pseudo_views=true
+name: mobilenetv3_small_mv
+backbone: mobilenet_v3_small
+pretrained: true
+embedding_dim: 576
+dropout: 0.2
+
+# --- Multi-view fusion ---
+num_views: 4
+fusion: attention                    # mean | max | attention | gated
+view_dropout: 0.3                    # randomly blank views in training -> view-count robust

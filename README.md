@@ -11,10 +11,11 @@ hardware-agnostic export/benchmark toolchain, and a documented physical capture
 protocol. The model is the focus — reliable and fast — but it must stay easy to
 re-train as better data arrives.
 
-> **Status: Phase 1 — a working end-to-end pipeline.** `ingest → train → eval →
-> export → bench` runs on public data; the single-view baseline reaches **0.92
-> test macro-F1**. See [`docs/research-log.md`](docs/research-log.md) for live
-> progress and [the roadmap](#roadmap) below.
+> **Status: Phase 2 — multi-view model.** The full pipeline (`ingest → train →
+> eval → export → bench`) runs on public data — single-view baseline **0.92 test
+> macro-F1** — and the multi-view model is trained and shown to be view-count
+> robust. See [`docs/research-log.md`](docs/research-log.md) for live progress
+> and [the roadmap](#roadmap) below.
 
 ## The idea
 
@@ -84,9 +85,9 @@ answer, tracked in [`docs/research-log.md`](docs/research-log.md):
 ## Roadmap
 
 - **Phase 0** — Scaffolding ✓
-- **Phase 1** — Data pipeline + single-view public baseline *(current)*
-- **Phase 2** — Multi-view fusion model
-- **Phase 3** — Physical capture protocol + proprietary Arabica data
+- **Phase 1** — Data pipeline + single-view public baseline ✓
+- **Phase 2** — Multi-view fusion model ✓
+- **Phase 3** — Physical capture protocol + proprietary Arabica data *(current)*
 - **Phase 4** — Multi-spectral illumination (UV, transillumination)
 - **Phase 5** — Speed: backbone sweep, INT8, hardware benchmark
 - **Phase 6** — Deployment reference + sorting-machine spec
