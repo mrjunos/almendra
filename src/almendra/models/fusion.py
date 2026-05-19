@@ -37,6 +37,25 @@ class AttentionFusion(nn.Module):
         return (x * weights.unsqueeze(-1)).sum(dim=1)
 
 
+class GatedAttentionFusion(nn.Module):
+    """Gated attention pooling (Ilse et al., 2018).
+
+    A sigmoid gating branch multiplies the tanh feature branch, letting the model
+    suppress uninformative views more sharply than plain attention pooling.
+    """
+
+    def __init__(self, dim: int, hidden: int = 128):
+        super().__init__()
+        self.feature = nn.Linear(dim, hidden)
+        self.gate = nn.Linear(dim, hidden)
+        self.score = nn.Linear(hidden, 1)
+
+    def forward(self, x):  # [B, V, D] -> [B, D]
+        attended = torch.tanh(self.feature(x)) * torch.sigmoid(self.gate(x))
+        weights = torch.softmax(self.score(attended).squeeze(-1), dim=1)  # [B, V]
+        return (x * weights.unsqueeze(-1)).sum(dim=1)
+
+
 def build_fusion(name: str, dim: int) -> nn.Module:
     if name == "mean":
         return MeanFusion()
@@ -44,4 +63,6 @@ def build_fusion(name: str, dim: int) -> nn.Module:
         return MaxFusion()
     if name == "attention":
         return AttentionFusion(dim)
-    raise ValueError(f"unknown fusion '{name}'; expected mean | max | attention")
+    if name == "gated":
+        return GatedAttentionFusion(dim)
+    raise ValueError(f"unknown fusion '{name}'; expected mean | max | attention | gated")

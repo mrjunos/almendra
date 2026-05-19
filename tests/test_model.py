@@ -23,7 +23,7 @@ def test_forward_multi_view():
 
 def test_fusion_heads_preserve_shape():
     x = torch.randn(3, 4, 16)  # [B, V, D]
-    for name in ("mean", "max", "attention"):
+    for name in ("mean", "max", "attention", "gated"):
         assert build_fusion(name, 16)(x).shape == (3, 16)
 
 

@@ -13,6 +13,11 @@ sources:
 image_size: 224
 views_per_bean: 1                   # public data is single-view
 
+# Synthesise `model.num_views` views from each single-view bean (distinct fixed
+# orientations). A stand-in for real multi-view data — see almendra.datasets.pseudoview.
+# Keep false for the single-view baseline; set true for multi-view experiments.
+pseudo_views: false
+
 splits:
   train: 0.70
   val: 0.15

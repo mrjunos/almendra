@@ -56,11 +56,22 @@ def _print_report(metrics: dict, mdr: float, taxonomy) -> None:
         )
 
 
-def run(cfg, checkpoint: str | None = None, split: str = "test") -> dict:
-    """Evaluate a checkpoint and return the metrics dict."""
+def run(
+    cfg,
+    checkpoint: str | None = None,
+    split: str = "test",
+    views: int | None = None,
+) -> dict:
+    """Evaluate a checkpoint and return the metrics dict.
+
+    `views` overrides the evaluation view count — pass 1/2/4 to probe a
+    multi-view checkpoint's view-count robustness (the model is view-agnostic).
+    """
     taxonomy = get_taxonomy()
     num_classes = taxonomy.num_defect_classes
     device = resolve_device(cfg.device)
+    if views is not None:
+        cfg.model.num_views = views
 
     ckpt_path = Path(checkpoint) if checkpoint else Path(cfg.output_dir) / "best.pt"
     if not ckpt_path.is_file():
@@ -73,7 +84,13 @@ def run(cfg, checkpoint: str | None = None, split: str = "test") -> dict:
 
     transform = build_transforms(cfg.data.image_size, None, train=False)
     loader = DataLoader(
-        MultiViewBeanDataset(records, transform, cfg.model.num_views, 0.0),
+        MultiViewBeanDataset(
+            records,
+            transform,
+            cfg.model.num_views,
+            0.0,
+            pseudo_views=cfg.data.get("pseudo_views", False),
+        ),
         batch_size=cfg.train.batch_size,
         num_workers=cfg.data.num_workers,
     )
@@ -83,6 +100,9 @@ def run(cfg, checkpoint: str | None = None, split: str = "test") -> dict:
     metrics["missed_defect_rate"] = missed_defect_rate(targets, preds, taxonomy.index_of("sound"))
     metrics["confusion_matrix"] = confusion(targets, preds, num_classes).tolist()
 
-    print(f"\n=== evaluation on '{split}' split ({len(records)} beans) ===")
+    print(
+        f"\n=== evaluation on '{split}' split "
+        f"({len(records)} beans, {cfg.model.num_views} view(s)) ==="
+    )
     _print_report(metrics, metrics["missed_defect_rate"], taxonomy)
     return metrics

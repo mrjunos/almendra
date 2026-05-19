@@ -87,8 +87,11 @@ def _build_loaders(cfg):
     eval_tf = build_transforms(cfg.data.image_size, None, train=False)
     num_views = cfg.model.num_views
 
-    train_ds = MultiViewBeanDataset(train_recs, train_tf, num_views, cfg.model.view_dropout)
-    val_ds = MultiViewBeanDataset(val_recs, eval_tf, num_views, 0.0)
+    pseudo = cfg.data.get("pseudo_views", False)
+    train_ds = MultiViewBeanDataset(
+        train_recs, train_tf, num_views, cfg.model.view_dropout, pseudo_views=pseudo
+    )
+    val_ds = MultiViewBeanDataset(val_recs, eval_tf, num_views, 0.0, pseudo_views=pseudo)
 
     workers = cfg.data.num_workers
     train_dl = DataLoader(
