@@ -53,6 +53,10 @@ data = [
     "kagglehub>=0.3",
     "roboflow>=1.1",
 ]
+capture = [
+    # ArUco marker detection for the gridded-tray auto-segmentation pipeline.
+    "opencv-contrib-python-headless>=4.9",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",

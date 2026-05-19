@@ -6,8 +6,8 @@ quality — this step is treated as rigorously as the model code.
 ## Principles
 - **Blind:** label against the bean and the SCA reference only — never against
   model predictions.
-- **Physical first:** the grader labels the *physical bean* (from the graded
-  tray, Step 6 of the capture protocol), using the captured images as support.
+- **Physical first:** the grader labels the *physical bean* in its tray well
+  (Step 8 of the capture protocol), using the captured images as support.
 - **One axis at a time:** assign a `defect` class and, separately, a
   `morphology` class — see `data/taxonomy.yaml`.
 
@@ -16,15 +16,15 @@ A grader trained on the **SCA Arabica Green Coffee Defect Handbook**. For v1 thi
 may be the project lead; the SOP is written so a second grader can be added.
 
 ## Procedure (per bean)
-1. Retrieve the physical bean by `bean_id` from the graded tray.
+1. Locate the bean by its well address `(row, col)` in the capture tray.
 2. Inspect it against the SCA reference defect chart; consult the captured
    front-light, back-light and UV images for hidden damage.
 3. Assign exactly **one** `defect` class from `data/taxonomy.yaml`.
    - If defective but the type is unclear, use `defect_unspecified` — do **not**
      guess a specific defect.
 4. Assign exactly **one** `morphology` class (`normal` unless clearly otherwise).
-5. Record: `bean_id`, `defect`, `morphology`, `grader_id`, `taxonomy_version`,
-   `timestamp`, and free-text `notes` for anything ambiguous.
+5. Record: well `(row, col)`, `defect`, `morphology`, `grader_id`,
+   `taxonomy_version`, `timestamp`, and free-text `notes` for anything ambiguous.
 
 ## Inter-annotator agreement (IAA)
 - A **random ≥ 10 %** of every lot is **independently double-labelled**.

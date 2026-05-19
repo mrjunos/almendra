@@ -8,8 +8,9 @@ Subcommands
   eval     evaluate a checkpoint
   export   export a checkpoint to ONNX (+ INT8)
   bench    benchmark inference latency / throughput
+  tray-check  segment beans from gridded-tray photos (capture data prep)
 
-All pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
+The pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
 ``almendra train model=efficientnet_b0 train.epochs=50``.
 """
 
@@ -88,6 +89,48 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tray_check(args: argparse.Namespace) -> int:
+    """Segment beans from gridded-tray photos and write crops + a debug overlay."""
+    from pathlib import Path
+
+    from almendra.datasets import tray
+
+    spec = tray.TraySpec(
+        rows=args.rows,
+        cols=args.cols,
+        flip=args.flip,
+        marker_dict=args.marker_dict,
+        margin_frac=args.margin_frac,
+        well_frac=args.well_frac,
+    )
+    out_dir = Path(args.out)
+    crops_dir = out_dir / "crops"
+
+    rect_a = tray.rectify(tray.load_image(args.side_a), spec)
+    beans_a = tray.extract_from_rectified(rect_a, spec)
+    tray.save_image(tray.draw_overlay(rect_a, spec, beans_a), out_dir / "overlay_a.png")
+    print(f"side A: {len(beans_a)} beans found across {spec.rows}x{spec.cols} wells")
+
+    if args.side_b:
+        rect_b = tray.rectify(tray.load_image(args.side_b), spec)
+        beans_b = tray.extract_from_rectified(rect_b, spec)
+        tray.save_image(tray.draw_overlay(rect_b, spec, beans_b), out_dir / "overlay_b.png")
+        print(f"side B: {len(beans_b)} beans found")
+
+        paired = tray.pair_sides(beans_a, beans_b, spec)
+        two_view = sum(1 for views in paired.values() if len(views) == 2)
+        print(f"paired: {two_view} two-view beans, {len(paired) - two_view} single-view")
+        for (row, col), views in paired.items():
+            for i, crop in enumerate(views):
+                tray.save_image(crop, crops_dir / f"bean_r{row}c{col}_v{i}.png")
+    else:
+        for (row, col), crop in beans_a.items():
+            tray.save_image(crop, crops_dir / f"bean_r{row}c{col}.png")
+
+    print(f"crops + overlays written to {out_dir}/")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="almendra",
@@ -123,6 +166,33 @@ def build_parser() -> argparse.ArgumentParser:
     p_bench.add_argument("--model", help="path to an ONNX model")
     p_bench.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
     p_bench.set_defaults(func=cmd_bench)
+
+    p_tray = sub.add_parser("tray-check", help="segment beans from gridded-tray photos")
+    p_tray.add_argument("--rows", type=int, required=True, help="number of well rows")
+    p_tray.add_argument("--cols", type=int, required=True, help="number of well columns")
+    p_tray.add_argument("--side-a", required=True, help="side-A tray photo")
+    p_tray.add_argument("--side-b", help="side-B tray photo (optional — enables pairing)")
+    p_tray.add_argument("--out", default="outputs/tray", help="output directory")
+    p_tray.add_argument(
+        "--flip",
+        default="mirror_cols",
+        choices=["identity", "mirror_rows", "mirror_cols"],
+        help="how side B maps to side A after the flip",
+    )
+    p_tray.add_argument("--marker-dict", default="DICT_4X4_50", help="ArUco dictionary")
+    p_tray.add_argument(
+        "--margin-frac",
+        type=float,
+        default=0.10,
+        help="grid inset from the marker quad (default: 0.10)",
+    )
+    p_tray.add_argument(
+        "--well-frac",
+        type=float,
+        default=0.85,
+        help="well crop window as a fraction of the cell pitch (default: 0.85)",
+    )
+    p_tray.set_defaults(func=cmd_tray_check)
 
     return parser
 

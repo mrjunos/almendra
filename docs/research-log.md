@@ -40,6 +40,16 @@ deployment tooling). Headline findings:
 
 ## Log
 
+### 2026-05-19 — Tray batch-capture segmentation
+- Added the gridded-tray auto-segmentation pipeline (`src/almendra/datasets/tray.py`)
+  and the `almendra tray-check` command: photograph a tray of beans, flip it,
+  photograph again — the software rectifies each photo via corner ArUco markers,
+  crops every well, and pairs the two sides into multi-view beans by well address.
+- Capture protocol (`capture/`) rewritten around batch tray capture (see
+  ADR-0005), replacing per-bean singulation as the Rig A method.
+- The structured `format: tray` source ingester (sessions + labels → manifest)
+  remains a Phase 3 task.
+
 ### 2026-05-19 — Phase 1: data pipeline + single-view baseline
 - Roboflow Robusta defects dataset (v2, 1507 images) downloaded and ingested:
   COCO instances cropped to single-bean images → `data/processed/manifest.jsonl`
