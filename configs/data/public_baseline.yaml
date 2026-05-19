@@ -6,9 +6,9 @@ root: data                          # dataset root (raw payloads managed by DVC)
 
 # Which data/sources/*.yaml adapters to combine. Detection/segmentation sources
 # are cropped to one bean per image by the ingestion pipeline.
+# usk_coffee is added once it is downloaded (needs a manual portal download).
 sources:
   - roboflow_robusta_defects
-  - usk_coffee
 
 image_size: 224
 views_per_bean: 1                   # public data is single-view

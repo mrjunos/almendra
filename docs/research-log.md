@@ -40,6 +40,25 @@ deployment tooling). Headline findings:
 
 ## Log
 
+### 2026-05-19 — Phase 1: data pipeline + single-view baseline
+- Roboflow Robusta defects dataset (v2, 1507 images) downloaded and ingested:
+  COCO instances cropped to single-bean images → `data/processed/manifest.jsonl`
+  (1507 beans across 7 of the 18 canonical classes).
+- Full pipeline implemented and run end-to-end — `ingest → train → eval →
+  export → bench` — driven by Hydra config and the `almendra` CLI.
+- **Baseline** — MobileNetV3-Small, single-view, 30 epochs, seed 42:
+  - validation macro-F1 **0.936**
+  - **test**: accuracy **0.919**, macro-F1 **0.921**, missed-defect rate **0.047**
+  - per-class test F1: full_black / broken / hull_husk 1.00, sound 0.95,
+    severe_insect_damage 0.93, immature 0.84, defect_unspecified 0.73
+- ONNX export passes the numerical parity check (max logit diff 1.3e-5); INT8
+  dynamic quantization shrinks the model 4.06 MB → 1.20 MB.
+- Latency (ONNX Runtime, CPU, batch 1): p50 ≈ 2.1 ms, ≈ 470 beans/s — the model
+  is far from the throughput bottleneck, as intended.
+- **Caveat:** this baseline is **Robusta** public data with partly coarse labels
+  (`defect_unspecified`). It validates the *framework* end-to-end — it is not the
+  final Arabica model.
+
 ### 2026-05-19 — Phase 0: scaffolding
 - Repository created: `github.com/mrjunos/almendra` (Apache-2.0).
 - Canonical taxonomy drafted (`data/taxonomy.yaml`): 18 defect classes

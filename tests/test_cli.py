@@ -1,29 +1,37 @@
-"""Tests for the almendra command-line interface."""
+"""Tests for the almendra command-line interface.
+
+The pipeline subcommands (ingest/train/eval/export/bench) are not executed here
+— they need data and are exercised by the end-to-end smoke run. These tests
+cover argument parsing and the `info` command.
+"""
 
 import pytest
 
-from almendra.cli import main
+from almendra.cli import build_parser, main
 
 
 def test_info_runs_and_prints_taxonomy(capsys):
-    rc = main(["info"])
-    assert rc == 0
+    assert main(["info"]) == 0
     out = capsys.readouterr().out
     assert "defect classes" in out
     assert "sound" in out
 
 
-@pytest.mark.parametrize("command", ["train", "eval", "export", "bench"])
-def test_planned_commands_run_as_stubs(command, capsys):
-    rc = main([command])
-    assert rc == 0
-    assert "not implemented" in capsys.readouterr().out
+@pytest.mark.parametrize("command", ["info", "ingest", "train", "eval", "export", "bench"])
+def test_parser_exposes_subcommand(command):
+    args = build_parser().parse_args([command])
+    assert callable(args.func)
 
 
-def test_planned_command_accepts_overrides(capsys):
-    # Hydra-style overrides must not break argument parsing.
-    rc = main(["train", "model=efficientnet_b0", "train.epochs=5"])
-    assert rc == 0
+def test_pipeline_subcommands_accept_hydra_overrides():
+    args = build_parser().parse_args(["train", "model=efficientnet_b0", "seed=7"])
+    assert args.overrides == ["model=efficientnet_b0", "seed=7"]
+
+
+def test_eval_accepts_checkpoint_and_split():
+    args = build_parser().parse_args(["eval", "--split", "val", "--checkpoint", "x.pt"])
+    assert args.split == "val"
+    assert args.checkpoint == "x.pt"
 
 
 def test_no_command_errors():

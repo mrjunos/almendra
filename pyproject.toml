@@ -45,11 +45,13 @@ train = [
 export = [
     "onnx>=1.16",
     "onnxruntime>=1.18",
+    "onnxscript>=0.1",
 ]
 data = [
     "dvc>=3.50",
     "huggingface-hub>=0.23",
     "kagglehub>=0.3",
+    "roboflow>=1.1",
 ]
 dev = [
     "pytest>=8.0",

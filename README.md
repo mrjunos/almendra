@@ -11,9 +11,10 @@ hardware-agnostic export/benchmark toolchain, and a documented physical capture
 protocol. The model is the focus — reliable and fast — but it must stay easy to
 re-train as better data arrives.
 
-> **Status: Phase 0 — scaffolding.** The pipeline is built phase by phase; see
-> [`docs/research-log.md`](docs/research-log.md) for live progress and
-> [the project plan](#roadmap) below.
+> **Status: Phase 1 — a working end-to-end pipeline.** `ingest → train → eval →
+> export → bench` runs on public data; the single-view baseline reaches **0.92
+> test macro-F1**. See [`docs/research-log.md`](docs/research-log.md) for live
+> progress and [the roadmap](#roadmap) below.
 
 ## The idea
 
@@ -45,10 +46,16 @@ make info                # print the canonical taxonomy and project status
 make test                # run the test suite
 ```
 
-To work on the full pipeline (training, export, datasets):
+To run the full pipeline:
 
 ```bash
 make setup               # install everything (torch, onnx, dvc, ...)
+make data                # download public datasets (needs ROBOFLOW_API_KEY)
+make ingest              # crop instances + build data/processed/manifest.jsonl
+make train               # train the baseline defect classifier
+make eval                # evaluate on the test split
+make export              # export to ONNX (+ INT8) with a parity check
+make bench               # benchmark inference latency
 ```
 
 ## Repository layout
@@ -76,8 +83,8 @@ answer, tracked in [`docs/research-log.md`](docs/research-log.md):
 
 ## Roadmap
 
-- **Phase 0** — Scaffolding *(current)*
-- **Phase 1** — Data pipeline + single-view public baseline
+- **Phase 0** — Scaffolding ✓
+- **Phase 1** — Data pipeline + single-view public baseline *(current)*
 - **Phase 2** — Multi-view fusion model
 - **Phase 3** — Physical capture protocol + proprietary Arabica data
 - **Phase 4** — Multi-spectral illumination (UV, transillumination)

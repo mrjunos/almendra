@@ -14,10 +14,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      # Core + dev only — fast, torch-free. Enough to lint and to test the
-      # taxonomy + CLI. Training/export jobs are added with their phases.
-      - name: Install (core + dev)
-        run: uv sync --extra dev
+      # core + dev + train + export — installs torch/sklearn/onnx so the model,
+      # metrics and pipeline modules are exercised. The `data` extra (roboflow,
+      # dvc) is omitted: tests do not touch dataset downloads.
+      - name: Install (core + dev + train + export)
+        run: uv sync --extra dev --extra train --extra export
 
       - name: Ruff lint
         run: uv run ruff check .
