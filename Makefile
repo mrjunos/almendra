@@ -32,6 +32,9 @@ info: ## Print the canonical taxonomy and project status
 data: ## Download the configured public datasets
 	uv run python scripts/download_public_datasets.py
 
+ingest: ## Ingest downloaded datasets into data/processed/manifest.jsonl
+	uv run almendra ingest
+
 train: ## Train a model (override config: make train ARGS="model=efficientnet_lite0")
 	uv run almendra train $(ARGS)
 

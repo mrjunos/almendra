@@ -2,14 +2,15 @@
 
 Subcommands
 -----------
-  info     print the canonical taxonomy and project status   (implemented)
-  train    train a model                                     (Phase 1)
-  eval     evaluate a checkpoint                              (Phase 1)
-  export   export a checkpoint to ONNX (+ INT8)               (Phase 1)
-  bench    benchmark inference latency / throughput           (Phase 5)
+  info     print the canonical taxonomy and project status
+  ingest   build the dataset manifest from downloaded data
+  train    train the defect classifier
+  eval     evaluate a checkpoint
+  export   export a checkpoint to ONNX (+ INT8)
+  bench    benchmark inference latency / throughput
 
-The planned subcommands are deliberate, honest stubs: the pipeline they drive is
-built phase by phase (see docs/research-log.md).
+All pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
+``almendra train model=efficientnet_b0 train.epochs=50``.
 """
 
 from __future__ import annotations
@@ -20,13 +21,17 @@ import sys
 from almendra import __version__
 from almendra.taxonomy import get_taxonomy
 
-# Subcommand name -> phase in which it becomes functional.
-_PLANNED = {
-    "train": "Phase 1",
-    "eval": "Phase 1",
-    "export": "Phase 1",
-    "bench": "Phase 5",
-}
+
+def _compose(overrides: list[str] | None):
+    """Compose the Hydra config (configs/config.yaml) with CLI overrides."""
+    from hydra import compose, initialize_config_dir
+    from hydra.core.global_hydra import GlobalHydra
+
+    from almendra.paths import configs_dir
+
+    GlobalHydra.instance().clear()
+    with initialize_config_dir(version_base=None, config_dir=str(configs_dir())):
+        return compose(config_name="config", overrides=list(overrides or []))
 
 
 def cmd_info(_args: argparse.Namespace) -> int:
@@ -48,15 +53,39 @@ def cmd_info(_args: argparse.Namespace) -> int:
     return 0
 
 
-def _make_planned(name: str):
-    """Build a handler for a not-yet-implemented subcommand."""
+def cmd_ingest(args: argparse.Namespace) -> int:
+    from almendra.datasets import ingest
 
-    def _run(_args: argparse.Namespace) -> int:
-        print(f"`almendra {name}` is not implemented yet ({_PLANNED[name]}).")
-        print("Track progress in docs/research-log.md.")
-        return 0
+    ingest.run(_compose(args.overrides))
+    return 0
 
-    return _run
+
+def cmd_train(args: argparse.Namespace) -> int:
+    from almendra.train import loop
+
+    loop.run(_compose(args.overrides))
+    return 0
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    from almendra.eval import evaluate
+
+    evaluate.run(_compose(args.overrides), checkpoint=args.checkpoint, split=args.split)
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    from almendra.export import exporter
+
+    exporter.run(_compose(args.overrides), checkpoint=args.checkpoint)
+    return 0
+
+
+def cmd_bench(args: argparse.Namespace) -> int:
+    from almendra.bench import latency
+
+    latency.run(_compose(args.overrides), model_path=args.model)
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,13 +97,32 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"almendra {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    info = sub.add_parser("info", help="print the taxonomy and project status")
-    info.set_defaults(func=cmd_info)
+    p_info = sub.add_parser("info", help="print the taxonomy and project status")
+    p_info.set_defaults(func=cmd_info)
 
-    for name, phase in _PLANNED.items():
-        p = sub.add_parser(name, help=f"{name} ({phase})")
-        p.add_argument("overrides", nargs="*", help="Hydra-style config overrides (key=value)")
-        p.set_defaults(func=_make_planned(name))
+    p_ingest = sub.add_parser("ingest", help="build the dataset manifest")
+    p_ingest.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_ingest.set_defaults(func=cmd_ingest)
+
+    p_train = sub.add_parser("train", help="train the defect classifier")
+    p_train.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_train.set_defaults(func=cmd_train)
+
+    p_eval = sub.add_parser("eval", help="evaluate a checkpoint")
+    p_eval.add_argument("--checkpoint", help="path to a checkpoint (.pt)")
+    p_eval.add_argument("--split", default="test", help="dataset split (default: test)")
+    p_eval.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_eval.set_defaults(func=cmd_eval)
+
+    p_export = sub.add_parser("export", help="export a checkpoint to ONNX (+ INT8)")
+    p_export.add_argument("--checkpoint", help="path to a checkpoint (.pt)")
+    p_export.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_export.set_defaults(func=cmd_export)
+
+    p_bench = sub.add_parser("bench", help="benchmark inference latency")
+    p_bench.add_argument("--model", help="path to an ONNX model")
+    p_bench.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_bench.set_defaults(func=cmd_bench)
 
     return parser
 

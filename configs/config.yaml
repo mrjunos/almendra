@@ -12,7 +12,7 @@ defaults:
 project_name: almendra
 seed: 42
 device: auto                       # auto | cpu | cuda | mps
-output_dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+output_dir: outputs/run            # working dir for checkpoints/exports (MLflow holds run history)
 
 # --- Experiment tracking (self-hosted MLflow, file backend by default) ---
 mlflow:

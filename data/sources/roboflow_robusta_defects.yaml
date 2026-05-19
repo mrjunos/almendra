@@ -11,11 +11,15 @@ status: usable
 species: robusta
 roast: green
 capture: controlled
-approx_images: 627
+approx_images: 1507                  # v2; ~627 annotated instances across 7 classes
 format: instance_segmentation        # polygon/box instances -> crop to one bean each
 
 download:
   method: roboflow
+  workspace: coffee-beans-ixp8d
+  project: robusta-coffee-bean-defects-hatuw
+  version: 2
+  format: coco-segmentation
   notes: "Needs a free Roboflow API key in the ROBOFLOW_API_KEY env var."
 
 ingest:
@@ -23,14 +27,15 @@ ingest:
   task: defect                       # contributes to the defect axis
 
 # Source label -> almendra canonical defect class. See data/taxonomy.yaml.
+# Names must match the Roboflow project's class names exactly.
 class_map:
-  Good: sound
-  Black: full_black
-  Broken: broken_chipped_cut
-  Insect: severe_insect_damage
-  Quaker: immature                   # quaker = immature bean (visible after roast)
-  Empty: hull_husk
-  Scorched: defect_unspecified        # mapping reviewed in docs/datasheets/
+  "Good bean": sound
+  "Black": full_black
+  "Broken": broken_chipped_cut
+  "Insect damage": severe_insect_damage
+  "Quaker": immature                 # quaker = immature bean (visible after roast)
+  "Empty": hull_husk
+  "Scorched": defect_unspecified      # mapping reviewed in docs/datasheets/
 
 notes: >
   Primary source of real per-class defect labels for the Phase 1 baseline.
