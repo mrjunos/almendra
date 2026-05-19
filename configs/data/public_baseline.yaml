@@ -1,0 +1,23 @@
+# @package data
+# Public-dataset baseline (Phase 1). Brings up the full pipeline end-to-end
+# before proprietary multi-view data is available.
+name: public_baseline
+root: data                          # dataset root (raw payloads managed by DVC)
+
+# Which data/sources/*.yaml adapters to combine. Detection/segmentation sources
+# are cropped to one bean per image by the ingestion pipeline.
+sources:
+  - roboflow_robusta_defects
+  - usk_coffee
+
+image_size: 224
+views_per_bean: 1                   # public data is single-view
+
+splits:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  stratified: true                  # stratify by canonical class
+  group_by: source_image            # keep crops from the same source image in one split
+
+num_workers: 4

@@ -1,0 +1,39 @@
+# Dataset adapter — Coffee Beans Dataset (CBD), Robusta (Mendeley Data)
+name: mendeley_cbd_robusta
+title: "Coffee Beans Dataset (CBD) — Robusta"
+url: "https://data.mendeley.com/datasets/52877z55vr/1"
+provider: mendeley
+
+license: "CC BY 4.0"
+commercial_use: true
+status: reference_only               # industrial GRADES, not per-bean defect types
+
+species: robusta
+roast: green
+capture: controlled_lightbox
+approx_images: 450
+format: classification               # lightbox image per grade
+
+download:
+  method: url
+  notes: "Direct download from Mendeley Data."
+
+ingest:
+  crop: detect_then_crop             # multiple beans per lightbox image
+  task: grade_reference
+
+# 9 industrial grades. PB-* are peaberry grades; BITS/BULK are mixed fractions.
+grade_map:
+  A:      { grade: a }
+  AA:     { grade: aa }
+  AAA:    { grade: aaa }
+  AB:     { grade: ab }
+  C:      { grade: c }
+  PB-I:   { grade: pb_i,  morphology: peaberry }
+  PB-II:  { grade: pb_ii, morphology: peaberry }
+  BITS:   { grade: bits }
+  BULK:   { grade: bulk }
+
+notes: >
+  Small but high-quality controlled-lighting set. Used as a grade-axis
+  reference and to stress-test the multi-bean detect-then-crop ingestion path.

@@ -1,0 +1,6 @@
+# Patterns DVC should ignore when tracking data directories.
+# See https://dvc.org/doc/user-guide/project-structure/dvcignore-files
+.DS_Store
+Thumbs.db
+*.tmp
+__pycache__/

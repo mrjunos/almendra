@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# uv
+uv.lock.bak
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Project outputs (experiment runs are tracked via MLflow, not git)
+outputs/
+mlruns/
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# Datasets — raw data is versioned with DVC, never committed directly.
+# The .dvc pointer files ARE committed; the data payloads are not.
+data/raw/
+data/processed/
+data/cache/
+data/**/*.png
+data/**/*.jpg
+data/**/*.jpeg
+!data/**/sample/**
+
+# Local environment / secrets
+.env
+*.local
+
+# OS
+.DS_Store
+Thumbs.db

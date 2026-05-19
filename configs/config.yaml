@@ -1,0 +1,21 @@
+# almendra — root Hydra config.
+# Compose with overrides on the command line, e.g.:
+#   almendra train model=efficientnet_b0 train.epochs=50 seed=7
+defaults:
+  - data: public_baseline
+  - model: mobilenetv3_small
+  - train: default
+  - export: onnx_int8
+  - _self_
+
+# --- Global ---
+project_name: almendra
+seed: 42
+device: auto                       # auto | cpu | cuda | mps
+output_dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+# --- Experiment tracking (self-hosted MLflow, file backend by default) ---
+mlflow:
+  tracking_uri: file:./mlruns
+  experiment: almendra-baseline
+  log_artifacts: true

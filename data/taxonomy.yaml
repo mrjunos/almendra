@@ -1,0 +1,171 @@
+# =============================================================================
+# almendra — canonical label schema for green coffee bean classification
+# =============================================================================
+# The model classifies ONE singulated green (unroasted) bean into exactly one
+# `defect` class. `morphology` is a SEPARATE, optional label axis (a peaberry is
+# not a defect — it is a normal bean of a different shape).
+#
+# Aligned to the SCA (Specialty Coffee Association) Arabica Green Coffee Defect
+# Handbook: Category 1 = primary defects, Category 2 = secondary defects.
+#
+# STATUS: PROVISIONAL. The `full_defect_equivalent` values below follow the
+# commonly published SCA conversion table but MUST be verified against the
+# official handbook before any sample-grading claim is published.
+# Tracked in docs/research-log.md and docs/adr/0003-taxonomy.md.
+#
+# Stability contract: `index` values are FIXED. New classes are only ever
+# appended with a new index; existing indices never change, so model outputs
+# stay comparable across retrains.
+# =============================================================================
+
+schema_version: 1
+verified: false
+reference: "SCA Arabica Green Coffee Defect Handbook"
+
+# --- Primary axis: defect class -------------------------------------------------
+# category               : 0 = none, 1 = SCA primary, 2 = SCA secondary
+# accept                  : true if a bean of this class passes the sorter
+# full_defect_equivalent  : number of beans of this class the SCA counts as one
+#                           "full defect" (0 = not a defect)
+defect_classes:
+  sound:
+    index: 0
+    category: 0
+    accept: true
+    full_defect_equivalent: 0
+    description: "Healthy bean, free of visible or internal defects."
+
+  # ---- Category 1 — primary defects ----
+  full_black:
+    index: 1
+    category: 1
+    accept: false
+    full_defect_equivalent: 1
+    description: "More than half the surface is black; over-fermentation or over-ripening."
+  full_sour:
+    index: 2
+    category: 1
+    accept: false
+    full_defect_equivalent: 1
+    description: "Reddish-brown to yellow sour bean; fermentation damage."
+  dried_cherry_pod:
+    index: 3
+    category: 1
+    accept: false
+    full_defect_equivalent: 1
+    description: "Bean still enclosed in dried cherry/pod (mucilage and skin)."
+  fungus_damaged:
+    index: 4
+    category: 1
+    accept: false
+    full_defect_equivalent: 1
+    description: "Yellowish-brown fungal growth on or within the bean."
+  foreign_matter:
+    index: 5
+    category: 1
+    accept: false
+    full_defect_equivalent: 1
+    description: "Non-coffee object: stone, stick, metal, etc."
+  severe_insect_damage:
+    index: 6
+    category: 1
+    accept: false
+    full_defect_equivalent: 0.2          # 5 beans = 1 full defect
+    description: "Three or more insect-bore holes, or extensive boring."
+
+  # ---- Category 2 — secondary defects ----
+  partial_black:
+    index: 7
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.333         # 3 beans = 1 full defect
+    description: "Less than half the surface is black."
+  partial_sour:
+    index: 8
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.333         # 3 beans = 1 full defect
+    description: "Less than half the surface shows sour discolouration."
+  parchment:
+    index: 9
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2           # 5 beans = 1 full defect
+    description: "Bean partly or wholly enclosed in dried parchment (pergamino)."
+  floater:
+    index: 10
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Pale, low-density bean; improper drying or storage."
+  immature:
+    index: 11
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Unripe bean with adhering silverskin; precursor of the roast 'quaker'."
+  withered:
+    index: 12
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Malformed, wrinkled bean; water stress during development."
+  shell:
+    index: 13
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Malformed shell-shaped bean (concha/oreja), a genetic deformation."
+  broken_chipped_cut:
+    index: 14
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Fragmented or mechanically damaged bean."
+  hull_husk:
+    index: 15
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: "Fragment of dried hull or husk."
+  slight_insect_damage:
+    index: 16
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.1           # 10 beans = 1 full defect
+    description: "One or two insect-bore holes."
+
+  # ---- Catch-all ----
+  defect_unspecified:
+    index: 17
+    category: 2
+    accept: false
+    full_defect_equivalent: 0.2
+    description: >
+      Defective bean of a type not resolved by the source label. Used when
+      ingesting datasets whose annotations only mark "defective" vs "good".
+      Excluded from per-class defect metrics; still counts toward accept/reject.
+
+# --- Secondary axis: morphology (NOT a defect) ---------------------------------
+# Bean shape/genetics. A separate (multi-task) head — added in Phase 2. Datasets
+# such as USK-COFFEE label these as classes; almendra keeps them off the defect
+# axis so morphology never inflates the defect rate.
+morphology_classes:
+  normal:    { index: 0, description: "Standard flat bean." }
+  peaberry:  { index: 1, description: "Single rounded bean (caracol); a normal, often-prized form." }
+  longberry: { index: 2, description: "Elongated bean; varietal/size trait." }
+  elephant:  { index: 3, description: "Two beans fused together (oversized)." }
+
+# --- Sample grading (informational) --------------------------------------------
+# The model decides per bean; grade is computed by aggregating bean predictions
+# over a sample. The SCA specialty threshold (350 g sample) is encoded here so
+# src/almendra/eval can derive a sample grade and report it alongside the model.
+grading:
+  sample_weight_g: 350
+  specialty:
+    max_category_1_full_defects: 0
+    max_category_2_full_defects: 5
+  notes: >
+    A full defect = sum over beans of `full_defect_equivalent`. Specialty grade
+    requires zero Category 1 full defects and at most 5 Category 2 full defects
+    in a 350 g sample. Verify exact thresholds against the official SCA handbook.

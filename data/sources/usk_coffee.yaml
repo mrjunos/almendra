@@ -1,0 +1,36 @@
+# Dataset adapter — USK-COFFEE (Multi-Class Green Arabica)
+name: usk_coffee
+title: "USK-COFFEE: A Multi-Class Green Arabica Coffee Bean Dataset"
+url: "https://comvis.unsyiah.ac.id/usk-coffee/"
+provider: usk
+
+license: "Public Domain"
+commercial_use: true
+status: usable                       # confirm host reachability at download time
+
+species: arabica
+roast: green
+capture: controlled
+approx_images: 8000
+format: classification               # one bean per image, per-image label
+
+download:
+  method: url
+  notes: "Direct download from the project portal; host occasionally times out."
+
+ingest:
+  crop: none                         # already single-bean
+  task: defect+morphology
+
+# USK-COFFEE mixes a coarse sound/defect split with morphology. Each source
+# label maps onto BOTH almendra axes.
+class_map:
+  premium:   { defect: sound,              morphology: normal }
+  defect:    { defect: defect_unspecified, morphology: normal }
+  longberry: { defect: sound,              morphology: longberry }
+  peaberry:  { defect: sound,              morphology: peaberry }
+
+notes: >
+  The only sizeable green-ARABICA set located. Defect labels are coarse
+  (sound vs unspecified-defect) but it anchors the morphology axis and adds
+  Arabica appearance to a Robusta-heavy public pool.

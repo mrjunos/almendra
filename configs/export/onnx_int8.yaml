@@ -1,0 +1,14 @@
+# @package export
+opset: 17
+dynamic_batch: true                 # dynamic batch axis for batched inference
+
+quantize:
+  enabled: true
+  mode: int8_static                 # int8_static (PTQ) | none
+  calibration_samples: 300          # held-out images used to calibrate PTQ
+
+# Numerical parity check: exported model vs the source PyTorch model.
+parity:
+  enabled: true
+  tolerance: 1.0e-3                 # max abs logit difference
+  num_samples: 64

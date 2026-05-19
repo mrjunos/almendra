@@ -1,0 +1,37 @@
+# Dataset adapter — Coffee Bean Grading Dataset (Hugging Face)
+name: samruddhk_grading
+title: "Coffee Bean Grading Dataset"
+url: "https://huggingface.co/datasets/SamruddhK/coffee-bean-grading-dataset"
+provider: huggingface
+
+license: "MIT"
+commercial_use: true
+status: reference_only               # quality GRADES, not per-bean defect types
+
+species: robusta
+roast: green
+capture: controlled_lightbox
+approx_images: 3877
+format: instance_segmentation        # polygon masks
+
+download:
+  method: huggingface
+  repo_id: "SamruddhK/coffee-bean-grading-dataset"
+  repo_type: dataset
+
+ingest:
+  crop: instances
+  task: grade_reference              # NOT used on the defect axis
+
+# Grades A/B/C/D are aggregate quality bands, not per-bean defect types — a
+# lossy mapping. Kept as a grade-axis reference dataset, not a defect source.
+grade_map:
+  A: { grade: a }
+  B: { grade: b }
+  C: { grade: c }
+  D: { grade: d }
+
+notes: >
+  Clean, MIT-licensed, lightbox-captured polygon masks — excellent for
+  validating the crop-to-single-bean ingestion pipeline. Not used to train the
+  defect classifier because grade labels do not decompose into defect classes.

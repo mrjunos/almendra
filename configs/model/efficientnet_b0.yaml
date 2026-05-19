@@ -1,0 +1,13 @@
+# @package model
+# Alternative backbone for the Phase 5 accuracy/latency/size sweep.
+# Note: EfficientNet-Lite, GhostNet, ShuffleNetV2 and MobileOne are added to the
+# sweep via the `timm` registry (src/almendra/models/backbone.py).
+name: efficientnet_b0
+backbone: efficientnet_b0           # torchvision backbone id
+pretrained: true
+embedding_dim: 1280
+dropout: 0.3
+
+num_views: 1
+fusion: attention                   # attention | mean | max
+view_dropout: 0.0

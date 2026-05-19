@@ -1,0 +1,34 @@
+# Dataset adapter — Coffee Green Bean with 17 Defects (Kaggle)
+name: kaggle_17defects
+title: "Coffee Green Bean with 17 Defects (Original)"
+url: "https://www.kaggle.com/datasets/sujitraarw/coffee-green-bean-with-17-defects-original"
+provider: kaggle
+
+license: "unknown"
+commercial_use: null
+status: license_unverified           # DO NOT ingest until the license is confirmed
+
+species: arabica
+roast: green
+capture: unknown
+approx_images: 6850
+format: classification
+
+download:
+  method: kagglehub
+  dataset: "sujitraarw/coffee-green-bean-with-17-defects-original"
+  notes: "Needs Kaggle credentials. Gated on license verification first."
+
+ingest:
+  crop: none
+  task: defect
+
+# The 17 source labels are filled in once the dataset is inspected in Phase 1,
+# then reviewed in docs/datasheets/kaggle_17defects.md. Left empty deliberately:
+# the download script refuses to ingest a source with an empty class_map.
+class_map: {}
+
+notes: >
+  Potentially the richest Arabica defect taxonomy in the public pool, but the
+  license is unstated. Verifying the license and the 17 label strings is an
+  explicit Phase 1 task — see docs/research-log.md.

@@ -1,0 +1,52 @@
+# Research Log
+
+almendra is run as a rigorous investigation. This log tracks the research
+questions, open uncertainties, and a dated record of decisions and findings.
+
+## Research questions
+
+| ID | Question | Metric | Status |
+|----|----------|--------|--------|
+| RQ1 | Does multi-view fusion lower the missed-defect rate vs a single best view? | Missed-defect rate, per class | Open — needs Phase 2 + data |
+| RQ2 | Does multi-spectral illumination (UV, transillumination) catch defects RGB front-light misses? | Per-class recall delta | Open — needs Phase 4 |
+| RQ3 | What is the accuracy / latency / model-size Pareto frontier across backbones? | Macro-F1 vs p95 latency vs MB | Open — Phase 5 |
+| RQ4 | What accuracy is lost to INT8 quantization, per class? | Per-class F1 delta (FP32→INT8) | Open — Phase 5 |
+| RQ5 | How few deployment views keep per-class recall acceptable? | Recall vs view count | Open — Phase 5 |
+
+## Open uncertainties / TODO
+
+- [ ] **Verify the SCA `full_defect_equivalent` table** in `data/taxonomy.yaml`
+      against the official SCA Arabica Green Coffee Defect Handbook. Currently
+      marked `verified: false`.
+- [ ] **USK-COFFEE host reachability** — research found the portal timing out;
+      confirm a working download path before relying on it.
+- [ ] **Kaggle 17-defects licence** — unstated. Do not ingest until confirmed;
+      then fill the empty `class_map` in `data/sources/kaggle_17defects.yaml`.
+- [ ] Decide the Phase 2 fusion-head default (attention vs gated pooling) once
+      multi-view data exists.
+
+## Findings carried in from pre-project research
+
+Three background research sweeps informed the plan (datasets, SOTA models,
+deployment tooling). Headline findings:
+
+- **Verified:** YOLOv10-N reached ~0.992 precision on green-bean micro-defects
+  (Bangladesh study); a MobileNetV3 + Tiny-YOLOv8 edge framework reached 96.8 %
+  at < 150 ms on a Raspberry Pi.
+- **Unverified:** specific YOLOv8-vs-YOLOv11 USK-COFFEE mAP claims and a
+  YOLOv12-for-SCA-defects study could not be confirmed in published literature.
+- **Datasets:** no large, cleanly-licensed Arabica defect dataset exists; most
+  public data is Robusta. This shaped the dual-track data strategy.
+
+## Log
+
+### 2026-05-19 — Phase 0: scaffolding
+- Repository created: `github.com/mrjunos/almendra` (Apache-2.0).
+- Canonical taxonomy drafted (`data/taxonomy.yaml`): 18 defect classes
+  (SCA-aligned, **provisional**) + 4 morphology classes.
+- Dataset adapters declared for 5 public datasets (`data/sources/`).
+- Toolchain fixed: uv + Hydra + DVC + MLflow + ONNX (see ADR-0004).
+- Package skeleton, CLI (`almendra info`), tests and CI in place.
+- Capture protocol for Rig A documented (`capture/`).
+
+<!-- New entries go on top, newest first. -->

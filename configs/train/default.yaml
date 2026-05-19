@@ -1,0 +1,31 @@
+# @package train
+epochs: 30
+batch_size: 64
+
+optimizer:
+  name: adamw
+  lr: 3.0e-4
+  weight_decay: 0.05
+
+scheduler:
+  name: cosine
+  warmup_epochs: 3
+
+loss:
+  name: cross_entropy
+  class_weighted: true              # defects are rare — weight to counter imbalance
+  label_smoothing: 0.1
+
+augmentation:
+  hflip: true
+  vflip: true
+  rotation_deg: 180                 # a bean has no canonical orientation
+  color_jitter: 0.2
+  random_resized_crop: true
+
+early_stopping:
+  monitor: val_macro_f1
+  mode: max
+  patience: 8
+
+amp: true                           # mixed-precision training

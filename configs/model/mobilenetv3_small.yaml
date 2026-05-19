@@ -1,0 +1,14 @@
+# @package model
+# v1 baseline backbone — small, fast, quantization-friendly (~2.5M params).
+name: mobilenetv3_small
+backbone: mobilenet_v3_small        # torchvision backbone id
+pretrained: true                   # ImageNet initialisation
+embedding_dim: 576                  # backbone feature dim feeding the fusion head
+dropout: 0.2
+
+# --- Multi-view fusion ---
+# num_views = 1            -> single-view baseline (Phase 1)
+# num_views > 1 + fusion   -> multi-view per-bean model (Phase 2)
+num_views: 1
+fusion: attention                   # attention | mean | max
+view_dropout: 0.0                    # train-time probability of dropping a view (Phase 2)
