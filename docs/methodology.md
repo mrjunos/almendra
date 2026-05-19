@@ -43,7 +43,9 @@ view N ─┘    (weights shared)                              (attention)
 
 Full-surface coverage and high volume seem to conflict. They are decoupled:
 
-- **Rig A** (data collection) is slow and exhaustive — many views per bean.
+- **Rig A** (data collection) is a gridded tray photographed on both sides —
+  many beans per shot, auto-segmented and paired by well address (see
+  `capture/protocol.md`, ADR-0005).
 - **Rig B** (production) is a free-fall multi-camera strobed curtain — few views,
   very high volume.
 - The **same model** serves both, because view-dropout training makes it

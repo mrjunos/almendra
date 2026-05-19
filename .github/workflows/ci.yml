@@ -17,8 +17,8 @@ jobs:
       # core + dev + train + export — installs torch/sklearn/onnx so the model,
       # metrics and pipeline modules are exercised. The `data` extra (roboflow,
       # dvc) is omitted: tests do not touch dataset downloads.
-      - name: Install (core + dev + train + export)
-        run: uv sync --extra dev --extra train --extra export
+      - name: Install (core + dev + train + export + capture)
+        run: uv sync --extra dev --extra train --extra export --extra capture
 
       - name: Ruff lint
         run: uv run ruff check .
