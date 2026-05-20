@@ -121,6 +121,13 @@ Use this to make sure the UI is *actually* doing what it should:
   "almendra.cli train"`. The UI's Stop button uses SIGTERM on the process
   group, but if you close the browser before pressing Stop the subprocess
   keeps running. This is intentional — long runs should survive a tab close.
+- **`StreamlitAPIException: ... cannot be modified after the widget ... is
+  instantiated`** when clicking a wizard button → upgrade past commit
+  [insert commit hash]. The fix uses an ``on_click`` callback that sets a
+  non-widget ``almendra.pending_page`` key, which the sidebar resolves before
+  rendering the radio on the next rerun. Writing to the radio's own key from
+  outside is forbidden by Streamlit; the callback pattern is the canonical
+  workaround.
 
 ## What's *not* in v1
 
