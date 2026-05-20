@@ -8,7 +8,6 @@ from pathlib import Path
 import streamlit as st
 
 from almendra.ui.components.i18n import Lang, t
-from almendra.ui.components.state import set_state
 from almendra.ui.discovery import list_runs, manifest_path
 
 
@@ -95,21 +94,44 @@ def render(lang: Lang) -> None:
         st.caption(f"`{Path.cwd()}`")
 
     st.markdown("---")
+    # Wizard buttons jump to other pages. We use an ``on_click`` callback (not
+    # ``if st.button(...): ...``) because callbacks fire *before* the next
+    # rerun starts — that means the sidebar's render_sidebar can see the new
+    # navigation target on the very next render and update the radio's index.
     with st.expander(t("home.wizard_header", lang), expanded=(total == 0)):
         st.markdown(t("home.wizard_intro", lang))
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown(f"**{t('home.wizard_step1', lang)}**")
-            if st.button(t("nav.tray", lang), key="wizard_tray", use_container_width=True):
-                set_state("almendra.page", "tray")
-                st.rerun()
+            st.button(
+                t("nav.tray", lang),
+                key="wizard_tray",
+                on_click=_request_nav,
+                args=("tray",),
+                use_container_width=True,
+            )
         with col2:
             st.markdown(f"**{t('home.wizard_step2', lang)}**")
-            if st.button(t("nav.train", lang), key="wizard_train", use_container_width=True):
-                set_state("almendra.page", "train")
-                st.rerun()
+            st.button(
+                t("nav.train", lang),
+                key="wizard_train",
+                on_click=_request_nav,
+                args=("train",),
+                use_container_width=True,
+            )
         with col3:
             st.markdown(f"**{t('home.wizard_step3', lang)}**")
-            if st.button(t("nav.evaluate", lang), key="wizard_eval", use_container_width=True):
-                set_state("almendra.page", "evaluate")
-                st.rerun()
+            st.button(
+                t("nav.evaluate", lang),
+                key="wizard_eval",
+                on_click=_request_nav,
+                args=("evaluate",),
+                use_container_width=True,
+            )
+
+
+def _request_nav(target: str) -> None:
+    """Streamlit on_click callback: ask the sidebar to switch pages."""
+    import streamlit as st
+
+    st.session_state["almendra.pending_page"] = target

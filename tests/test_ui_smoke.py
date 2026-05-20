@@ -48,3 +48,34 @@ def test_render_signature_consistent() -> None:
         module = getattr(views, f"page_{page}")
         sig = inspect.signature(module.render)
         assert "lang" in sig.parameters, f"page_{page}.render must accept lang"
+
+
+_APP_PATH = Path(__file__).resolve().parents[1] / "src" / "almendra" / "ui" / "app.py"
+
+
+@pytest.mark.parametrize(
+    "key,expected_page",
+    [
+        ("wizard_tray", "tray"),
+        ("wizard_train", "train"),
+        ("wizard_eval", "evaluate"),
+    ],
+)
+def test_home_wizard_navigates_via_full_app(key: str, expected_page: str) -> None:
+    """Driving the *full* app (not just one page), clicking each wizard button
+    must navigate to the matching page without raising.
+
+    Regression test for: writing to the sidebar radio's own session_state key
+    raised ``StreamlitAPIException`` on the first manual E2E run. The fix uses
+    an ``on_click`` callback that sets a non-widget ``almendra.pending_page``;
+    the sidebar then resolves it before rendering the radio on the next rerun.
+    """
+    at = AppTest.from_file(str(_APP_PATH), default_timeout=30)
+    at.run()
+    assert not at.exception, f"initial render raised: {[e.value for e in at.exception]}"
+    assert at.title[0].value == "Inicio"
+    wizard = [b for b in at.button if b.key == key]
+    assert wizard, f"button {key!r} missing from Home wizard"
+    wizard[0].click().run()
+    assert not at.exception, f"clicking {key} raised: {[e.value for e in at.exception]}"
+    assert at.session_state["almendra.current_page"] == expected_page
