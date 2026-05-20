@@ -8,6 +8,7 @@ Subcommands
   eval     evaluate a checkpoint
   export   export a checkpoint to ONNX (+ INT8)
   bench    benchmark inference latency / throughput
+  sweep    train + eval + export + bench across backbones (RQ3/RQ4)
   tray-check  segment beans from gridded-tray photos (capture data prep)
 
 The pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
@@ -94,6 +95,19 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sweep(args: argparse.Namespace) -> int:
+    from almendra.bench import sweep
+
+    backbones = [name.strip() for name in args.backbones.split(",") if name.strip()]
+    sweep.run(
+        _compose(args.overrides),
+        backbones=backbones,
+        epochs=args.epochs,
+        out_root=args.out,
+    )
+    return 0
+
+
 def cmd_tray_check(args: argparse.Namespace) -> int:
     """Segment beans from gridded-tray photos and write crops + a debug overlay."""
     from pathlib import Path
@@ -174,6 +188,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_bench.add_argument("--model", help="path to an ONNX model")
     p_bench.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
     p_bench.set_defaults(func=cmd_bench)
+
+    p_sweep = sub.add_parser("sweep", help="train + eval + export + bench across backbones")
+    p_sweep.add_argument(
+        "--backbones",
+        required=True,
+        help="comma-separated backbones (e.g. mobilenet_v3_small,efficientnet_b0)",
+    )
+    p_sweep.add_argument("--epochs", type=int, default=20, help="epochs per backbone")
+    p_sweep.add_argument("--out", default="outputs/sweep", help="output root directory")
+    p_sweep.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
+    p_sweep.set_defaults(func=cmd_sweep)
 
     p_tray = sub.add_parser("tray-check", help="segment beans from gridded-tray photos")
     p_tray.add_argument("--rows", type=int, required=True, help="number of well rows")

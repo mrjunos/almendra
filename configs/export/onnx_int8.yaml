@@ -4,9 +4,10 @@ dynamic_batch: true                 # dynamic batch axis for batched inference
 
 quantize:
   enabled: true
-  mode: int8_dynamic                # int8_dynamic (Phase 1) | int8_static (Phase 5) | none
-  # Dynamic INT8 needs no calibration set and ~4x-shrinks the weights.
-  # Static PTQ (better for raw speed) is a Phase 5 task — see docs/research-log.md.
+  mode: int8_static                  # int8_static | int8_dynamic | none
+  # Static PTQ quantizes weights AND activations using a real-image calibration
+  # set drawn from the train split of the manifest.
+  calibration_samples: 100
 
 # Numerical parity check: exported model vs the source PyTorch model.
 parity:

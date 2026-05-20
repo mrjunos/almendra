@@ -3,9 +3,12 @@
 Every float export is checked for numerical parity against the source PyTorch
 model — a silently wrong export must not ship.
 
-Phase 1 uses dynamic INT8 quantization (robust, no calibration set, ~4x smaller
-weights). Static PTQ with a calibration set — better for raw speed — is a
-Phase 5 task (see docs/research-log.md).
+Two quantization modes are supported (``cfg.export.quantize.mode``):
+
+- ``int8_dynamic`` — weights only, no calibration; robust, modest speed-up.
+- ``int8_static`` — weights + activations via PTQ with a calibration set of
+  real bean images drawn from the train split; smaller and usually faster on
+  CPU. Default for Phase 5.
 """
 
 from __future__ import annotations
@@ -61,6 +64,68 @@ def quantize_int8_dynamic(float_path: Path, int8_path: Path) -> None:
     quantize_dynamic(str(float_path), str(int8_path), weight_type=QuantType.QInt8)
 
 
+def quantize_int8_static(float_path: Path, int8_path: Path, calibration_reader) -> None:
+    """Static post-training quantization using a real-image calibration set."""
+    from onnxruntime.quantization import (
+        CalibrationMethod,
+        QuantFormat,
+        QuantType,
+        quantize_static,
+    )
+    from onnxruntime.quantization.shape_inference import quant_pre_process
+
+    prepped = float_path.with_suffix(".prep.onnx")
+    quant_pre_process(str(float_path), str(prepped))
+    # QUInt8 activations: ReLU produces non-negative values; symmetric INT8
+    # wastes half its range. per_channel=True: each Conv weight channel gets its
+    # own scale, recovering accuracy MobileNet-style backbones otherwise lose.
+    quantize_static(
+        str(prepped),
+        str(int8_path),
+        calibration_reader,
+        quant_format=QuantFormat.QDQ,
+        activation_type=QuantType.QUInt8,
+        weight_type=QuantType.QInt8,
+        calibrate_method=CalibrationMethod.MinMax,
+        per_channel=True,
+    )
+    prepped.unlink(missing_ok=True)
+
+
+def _build_calibration_reader(cfg):
+    """Build an ONNX Runtime calibration reader from the train split."""
+    from onnxruntime.quantization.calibrate import CalibrationDataReader
+
+    from almendra.datasets.manifest import filter_split, read_manifest
+    from almendra.datasets.multiview import MultiViewBeanDataset
+    from almendra.datasets.transforms import build_transforms
+    from almendra.paths import processed_dir
+
+    class _BeanReader(CalibrationDataReader):
+        def __init__(self, records, transform, num_views, root):
+            super().__init__()
+            dataset = MultiViewBeanDataset(records, transform, num_views, 0.0, root=root)
+            self._iter = iter(dataset)
+
+        def get_next(self):
+            try:
+                views, _ = next(self._iter)
+            except StopIteration:
+                return None
+            return {"views": views.unsqueeze(0).numpy().astype(np.float32)}
+
+    manifest = processed_dir() / "manifest.jsonl"
+    records = filter_split(read_manifest(manifest), "train")
+    # Shuffle deterministically so the calibration set covers the class
+    # distribution evenly, not just whatever classes appear first in the manifest.
+    import random as _random
+
+    _random.Random(42).shuffle(records)
+    n_samples = cfg.export.quantize.get("calibration_samples", 100)
+    transform = build_transforms(cfg.data.image_size, None, train=False)
+    return _BeanReader(records[:n_samples], transform, cfg.model.num_views, processed_dir())
+
+
 def run(cfg, checkpoint: str | None = None) -> dict:
     """Export the checkpoint to ONNX (+ optional INT8); return the artifact paths."""
     num_classes = get_taxonomy().num_defect_classes
@@ -103,15 +168,26 @@ def run(cfg, checkpoint: str | None = None) -> dict:
 
     result = {"float_onnx": str(float_path)}
     if cfg.export.quantize.enabled:
-        int8_path = out_dir / "model.int8.onnx"
+        mode = cfg.export.quantize.get("mode", "int8_dynamic")
+        int8_path: Path | None = out_dir / "model.int8.onnx"
         # Quantization is the flakier step — never let it sink a valid float export.
         try:
-            quantize_int8_dynamic(float_path, int8_path)
+            if mode == "int8_dynamic":
+                quantize_int8_dynamic(float_path, int8_path)
+            elif mode == "int8_static":
+                quantize_int8_static(float_path, int8_path, _build_calibration_reader(cfg))
+            elif mode == "none":
+                int8_path = None
+            else:
+                raise ValueError(f"unknown quantize mode: {mode}")
         except Exception as exc:  # noqa: BLE001
             print(f"INT8 quantization skipped: {exc}")
-        else:
+            int8_path = None
+        if int8_path is not None:
             float_mb = float_path.stat().st_size / 1e6
             int8_mb = int8_path.stat().st_size / 1e6
-            print(f"quantized INT8 -> {int8_path}  ({float_mb:.2f} MB -> {int8_mb:.2f} MB)")
+            print(
+                f"quantized INT8 ({mode}) -> {int8_path}  ({float_mb:.2f} MB -> {int8_mb:.2f} MB)"
+            )
             result["int8_onnx"] = str(int8_path)
     return result
