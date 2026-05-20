@@ -11,11 +11,12 @@ hardware-agnostic export/benchmark toolchain, and a documented physical capture
 protocol. The model is the focus — reliable and fast — but it must stay easy to
 re-train as better data arrives.
 
-> **Status: Phase 2 — multi-view model.** The full pipeline (`ingest → train →
-> eval → export → bench`) runs on public data — single-view baseline **0.92 test
-> macro-F1** — and the multi-view model is trained and shown to be view-count
-> robust. See [`docs/research-log.md`](docs/research-log.md) for live progress
-> and [the roadmap](#roadmap) below.
+> **Status: Phase 6 — local UI.** The full pipeline (`ingest → train → eval →
+> export → bench`) runs on public data; Phase 5's Pareto sweep picked
+> **MobileNetV3-Large + static INT8** as the current deploy choice (0.86 macro-F1,
+> 3.6 MB, ~430 beans/s on a single CPU thread); and a local Streamlit UI now
+> wraps the whole toolkit. See [`docs/research-log.md`](docs/research-log.md)
+> for the full log.
 
 ## The idea
 
@@ -59,6 +60,93 @@ make export              # export to ONNX (+ INT8) with a parity check
 make bench               # benchmark inference latency
 ```
 
+## Local UI
+
+A Streamlit app wraps the whole pipeline behind a bilingual ES/EN interface —
+tray capture, training (with live charts), evaluation, prediction and settings.
+A non-technical user can run almendra end-to-end without touching the CLI.
+
+![almendra Home page in Spanish](docs/images/ui-home.png)
+
+### Launch
+
+```bash
+uv sync --extra ui --extra train --extra export --extra capture
+make ui
+# equivalent: uv run almendra ui
+```
+
+The app opens at <http://localhost:8501>. Flags:
+
+```bash
+uv run almendra ui --port 8888       # use a different port
+uv run almendra ui --headless        # don't auto-open a browser (SSH / CI)
+```
+
+| Extra installed | Page it unlocks |
+|---|---|
+| `ui` | the app itself (Streamlit + Plotly) |
+| `train` | Train + Evaluate + mis-classified gallery (PyTorch) |
+| `export` | Predict (ONNX Runtime) |
+| `capture` | Tray Capture (OpenCV) |
+
+Skipping an extra is fine — the page that depends on it shows a clear error
+instead of crashing. Install later and reload.
+
+### What's in the app
+
+1. **🏠 Inicio / Home** — dataset stats, recent runs, a health panel, and an
+   inline wizard that walks first-time users through Ingest → Train → Eval.
+2. **📷 Bandeja / Tray Capture** — drag-and-drop tray photos, see the original
+   next to the rectified+overlay preview, save per-bean crops to
+   `data/raw/proprietary_tray/sessions/<id>/`.
+3. **🧠 Entrenar / Train** — pick a backbone and the key knobs (advanced
+   controls live behind an expander), launch training as a subprocess, and
+   watch `train_loss` + `val_macro_f1` update **in real time** as each epoch
+   completes.
+
+   ![Train page](docs/images/ui-train.png)
+
+4. **📊 Evaluar / Evaluate** — pick a checkpoint and split, run it, see
+   accuracy / macro-F1 / missed-defect-rate, per-class breakdown, confusion
+   matrix heatmap, and a gallery of mis-classified beans.
+5. **🚀 Predecir / Predict** — upload a single-bean photo, get the predicted
+   class, confidence, Top-3, and an accept/reject verdict from the canonical
+   taxonomy. Uses the most recent ONNX for speed (prefers INT8).
+6. **⚙️ Ajustes / Settings** — browse the canonical taxonomy, the YAML data
+   sources, and the current Hydra config.
+
+### End-to-end test in 5 minutes
+
+```bash
+# 1. install everything the UI exercises
+uv sync --extra ui --extra train --extra export --extra capture
+
+# 2. (optional) ingest the public Robusta baseline so Train/Evaluate have data
+export ROBOFLOW_API_KEY=...    # see your Roboflow workspace
+make data && make ingest
+
+# 3. launch the UI
+make ui
+```
+
+Then in the browser:
+
+1. **Inicio** — confirm the health panel shows Python/PyTorch/Taxonomy green;
+   the manifest icon flips to ✅ once `data/processed/manifest.jsonl` exists.
+2. **Entrenar** — backbone `mobilenet_v3_small`, **3 épocas** (for a smoke
+   test), **Iniciar entrenamiento**. The Plotly chart should start updating
+   within a couple of seconds of the first epoch landing.
+3. **Evaluar** — pick the run you just trained, leave `split = test`,
+   **Ejecutar**. You get the headline metrics + confusion matrix + error
+   gallery.
+4. **Predecir** — from a terminal, `uv run almendra export --checkpoint
+   outputs/ui-<timestamp>/best.pt`. Refresh the Predict page, pick the ONNX
+   from the dropdown, upload any single-bean image.
+
+See [`docs/ui.md`](docs/ui.md) for the deeper troubleshooting guide
+(stuck subprocesses, port conflicts, missing extras).
+
 ## Repository layout
 
 | Path | Purpose |
@@ -87,10 +175,10 @@ answer, tracked in [`docs/research-log.md`](docs/research-log.md):
 - **Phase 0** — Scaffolding ✓
 - **Phase 1** — Data pipeline + single-view public baseline ✓
 - **Phase 2** — Multi-view fusion model ✓
-- **Phase 3** — Physical capture protocol + proprietary Arabica data *(current)*
+- **Phase 3** — Physical capture protocol + proprietary Arabica data *(blocked on data)*
 - **Phase 4** — Multi-spectral illumination (UV, transillumination)
-- **Phase 5** — Speed: backbone sweep, INT8, hardware benchmark
-- **Phase 6** — Deployment reference + sorting-machine spec
+- **Phase 5** — Speed: backbone sweep, INT8, hardware benchmark ✓
+- **Phase 6** — Local Streamlit UI for the whole toolkit ✓
 - *Parallel research track* — NIR / hyperspectral internal-defect inspection
 
 ## Data & licensing

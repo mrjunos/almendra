@@ -10,6 +10,7 @@ Subcommands
   bench    benchmark inference latency / throughput
   sweep    train + eval + export + bench across backbones (RQ3/RQ4)
   tray-check  segment beans from gridded-tray photos (capture data prep)
+  ui       launch the local Streamlit UI (Phase 6)
 
 The pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
 ``almendra train model=efficientnet_b0 train.epochs=50``.
@@ -108,6 +109,38 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ui(args: argparse.Namespace) -> int:
+    """Launch the local Streamlit UI by exec'ing ``streamlit run`` on the app."""
+    import os
+    from pathlib import Path
+
+    app_path = Path(__file__).parent / "ui" / "app.py"
+    if not app_path.is_file():
+        raise FileNotFoundError(f"UI app not found at {app_path}")
+    try:
+        import streamlit.web.cli as stcli  # type: ignore
+    except ImportError as exc:
+        raise SystemExit(
+            "Streamlit is not installed. Run `uv sync --extra ui` (or "
+            "`pip install almendra[ui]`) and try again."
+        ) from exc
+    sys.argv = [
+        "streamlit",
+        "run",
+        str(app_path),
+        "--server.port",
+        str(args.port),
+        "--server.headless",
+        "true" if args.headless else "false",
+        "--browser.gatherUsageStats",
+        "false",
+    ]
+    if args.extra:
+        sys.argv.extend(args.extra)
+    os.environ.setdefault("ALMENDRA_UI_ROOT", str(Path.cwd()))
+    return int(stcli.main())
+
+
 def cmd_tray_check(args: argparse.Namespace) -> int:
     """Segment beans from gridded-tray photos and write crops + a debug overlay."""
     from pathlib import Path
@@ -199,6 +232,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_sweep.add_argument("--out", default="outputs/sweep", help="output root directory")
     p_sweep.add_argument("overrides", nargs="*", help="Hydra overrides (key=value)")
     p_sweep.set_defaults(func=cmd_sweep)
+
+    p_ui = sub.add_parser("ui", help="launch the local Streamlit UI")
+    p_ui.add_argument("--port", type=int, default=8501, help="server port (default: 8501)")
+    p_ui.add_argument(
+        "--headless",
+        action="store_true",
+        help="don't auto-open a browser (useful over SSH)",
+    )
+    p_ui.add_argument("extra", nargs=argparse.REMAINDER, help="extra args forwarded to streamlit")
+    p_ui.set_defaults(func=cmd_ui)
 
     p_tray = sub.add_parser("tray-check", help="segment beans from gridded-tray photos")
     p_tray.add_argument("--rows", type=int, required=True, help="number of well rows")

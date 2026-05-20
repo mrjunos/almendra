@@ -3,7 +3,7 @@
 # created by uv. Run `make help` for the full list.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-min lint format test info train eval export bench sweep data ingest clean
+.PHONY: help setup setup-min lint format test info train eval export bench sweep data ingest ui clean
 
 SWEEP_BACKBONES ?= mobilenet_v3_small,mobilenet_v3_large,efficientnet_b0
 SWEEP_EPOCHS ?= 20
@@ -52,6 +52,9 @@ bench: ## Benchmark inference latency / throughput
 
 sweep: ## Backbone sweep (override SWEEP_BACKBONES, SWEEP_EPOCHS)
 	uv run almendra sweep --backbones $(SWEEP_BACKBONES) --epochs $(SWEEP_EPOCHS) $(ARGS)
+
+ui: ## Launch the local Streamlit UI (Phase 6)
+	uv run almendra ui $(ARGS)
 
 clean: ## Remove build artifacts, caches and run outputs
 	rm -rf outputs mlruns .pytest_cache .ruff_cache dist build

@@ -7,7 +7,10 @@ on validation macro-F1. The best checkpoint is saved and logged to MLflow.
 
 from __future__ import annotations
 
+import json
+import os
 import random
+import time
 from pathlib import Path
 
 import mlflow
@@ -30,6 +33,26 @@ def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+
+def _live_metrics_path(output_dir: Path) -> Path | None:
+    """Where the UI tails live metrics from. ``ALMENDRA_LIVE_METRICS`` overrides."""
+    override = os.environ.get("ALMENDRA_LIVE_METRICS")
+    if override:
+        return Path(override)
+    return output_dir / "live_metrics.jsonl"
+
+
+def _write_live_metric(path: Path | None, payload: dict) -> None:
+    """Append one JSONL line; the Streamlit UI tails this file. Silent on failure."""
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload) + "\n")
+    except OSError:
+        pass
 
 
 def resolve_device(name: str) -> torch.device:
@@ -156,6 +179,21 @@ def run(cfg) -> Path:
     mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
     mlflow.set_experiment(cfg.mlflow.experiment)
 
+    live_path = _live_metrics_path(output_dir)
+    # Truncate any previous run's metrics so the UI tail starts clean.
+    if live_path is not None:
+        live_path.parent.mkdir(parents=True, exist_ok=True)
+        live_path.write_text("")
+    _write_live_metric(
+        live_path,
+        {
+            "event": "start",
+            "timestamp": time.time(),
+            "epochs": epochs,
+            "backbone": cfg.model.backbone,
+        },
+    )
+
     best_f1, bad_epochs = -1.0, 0
     patience = cfg.train.early_stopping.patience
 
@@ -188,6 +226,18 @@ def run(cfg) -> Path:
                 f"val_macro_f1={metrics['macro_f1']:.4f}  "
                 f"val_acc={metrics['accuracy']:.4f}"
             )
+            _write_live_metric(
+                live_path,
+                {
+                    "event": "epoch",
+                    "timestamp": time.time(),
+                    "epoch": epoch + 1,
+                    "epochs": epochs,
+                    "train_loss": train_loss,
+                    "val_macro_f1": metrics["macro_f1"],
+                    "val_accuracy": metrics["accuracy"],
+                },
+            )
 
             if metrics["macro_f1"] > best_f1:
                 best_f1, bad_epochs = metrics["macro_f1"], 0
@@ -212,5 +262,9 @@ def run(cfg) -> Path:
         if ckpt_path.is_file():
             mlflow.log_artifact(str(ckpt_path))
 
+    _write_live_metric(
+        live_path,
+        {"event": "done", "timestamp": time.time(), "best_val_macro_f1": best_f1},
+    )
     print(f"\nbest val macro-F1: {best_f1:.4f}  ->  {ckpt_path}")
     return ckpt_path
