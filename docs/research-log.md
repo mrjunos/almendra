@@ -9,8 +9,8 @@ questions, open uncertainties, and a dated record of decisions and findings.
 |----|----------|--------|--------|
 | RQ1 | Does multi-view fusion lower the missed-defect rate vs a single best view? | Missed-defect rate, per class | Open — needs real multi-view (tray) data |
 | RQ2 | Does multi-spectral illumination (UV, transillumination) catch defects RGB front-light misses? | Per-class recall delta | Open — needs Phase 4 |
-| RQ3 | What is the accuracy / latency / model-size Pareto frontier across backbones? | Macro-F1 vs p95 latency vs MB | Open — Phase 5 |
-| RQ4 | What accuracy is lost to INT8 quantization, per class? | Per-class F1 delta (FP32→INT8) | Open — Phase 5 |
+| RQ3 | What is the accuracy / latency / model-size Pareto frontier across backbones? | Macro-F1 vs p95 latency vs MB | Partially answered (Phase 5) — 3 torchvision backbones; timm variants deferred |
+| RQ4 | What accuracy is lost to INT8 quantization, per class? | Per-class F1 delta (FP32→INT8) | Answered (Phase 5) — per-backbone macro-F1 delta; MN3-Small needs dynamic / QAT |
 | RQ5 | How few deployment views keep per-class recall acceptable? | Recall vs view count | Partially answered (Phase 2) — view-count robustness shown on pseudo-views |
 
 ## Open uncertainties / TODO
@@ -24,6 +24,11 @@ questions, open uncertainties, and a dated record of decisions and findings.
       then fill the empty `class_map` in `data/sources/kaggle_17defects.yaml`.
 - [ ] Choose the fusion-head default (attention vs gated) — both are implemented;
       decide on real multi-view data, or as part of the Phase 5 sweep.
+- [ ] Recover MobileNetV3-Small INT8 accuracy via QAT or use dynamic INT8 as the
+      fallback for that backbone — static PTQ collapses (h-swish + per-tensor
+      MinMax). See the Phase 5 log entry.
+- [ ] Extend the backbone sweep with timm variants (efficientnet_lite0,
+      ghostnet, mobileone) to fill out the Pareto frontier.
 
 ## Findings carried in from pre-project research
 
@@ -39,6 +44,54 @@ deployment tooling). Headline findings:
   public data is Robusta. This shaped the dual-track data strategy.
 
 ## Log
+
+### 2026-05-20 — Phase 5: backbone sweep + static INT8 PTQ
+
+- Static INT8 PTQ implemented (`quantize_int8_static` in `src/almendra/export/exporter.py`):
+  ONNX Runtime per-channel weight quantization with QUInt8 activations and a
+  shuffled real-image calibration set drawn from the train split. Default mode
+  in `configs/export/onnx_int8.yaml`.
+- Backbone sweep runner (`almendra sweep` / `make sweep`) — train → eval →
+  export → bench per backbone, with a CSV + Pareto markdown report.
+- CI Node-20 actions bumped to `actions/checkout@v5` + `setup-uv@v6`.
+
+**Pareto sweep** — MobileNetV3-Small / MobileNetV3-Large / EfficientNet-B0
+(20 epochs each, single-view, ONNX Runtime CPU EP, batch 1, test split 62 beans):
+
+| backbone | FP32 mF1 | INT8 mF1 | mF1 loss | FP32 MB | INT8 MB | FP32 p50 ms | INT8 p50 ms | INT8 beans/s |
+|---|---|---|---|---|---|---|---|---|
+| mobilenet_v3_small | 0.894 | **0.034** | **−0.860** | 4.06 | 1.37 | 2.12 | 1.22 | 812 |
+| mobilenet_v3_large | 0.939 | 0.860 | −0.079 | 12.45 | 3.63 | 5.50 | 2.34 | 427 |
+| efficientnet_b0 | 0.895 | 0.714 | −0.182 | 16.78 | 5.13 | 10.03 | 4.63 | 216 |
+
+**RQ3 (Pareto frontier across backbones):**
+- **MobileNetV3-Large is the clear winner**: the highest FP32 accuracy (0.939),
+  retains healthy accuracy under INT8 (0.860), and runs at 427 beans/s in 3.6 MB
+  on a single CPU thread.
+- MobileNetV3-Small holds the FP32 speed/size corner (1.37 MB INT8, 1.2 ms) but
+  its INT8 is broken as currently quantized.
+- EfficientNet-B0 is **dominated** here: larger, slower, and lower FP32 accuracy
+  than MobileNetV3-Large.
+
+**RQ4 (INT8 accuracy cost):** static PTQ (per-channel weights, QUInt8
+activations, MinMax calibration over 100 shuffled train images):
+
+- **MobileNetV3-Small — catastrophic (−86 mF1 points).** Matches a known failure
+  mode: MN3-Small's *hardswish* activation has a range MinMax calibration cannot
+  pin down cleanly with per-tensor activation scales, and the per-channel fix
+  that rescues Conv-heavy networks does not transfer. Use **dynamic INT8**
+  (`mode: int8_dynamic`, weights only) for this backbone, or do QAT.
+- MobileNetV3-Large — −8 mF1 points: acceptable trade for 3.4× smaller and 2.4×
+  faster.
+- EfficientNet-B0 — −18 mF1 points: sub-acceptable. Either keep FP32 or pick a
+  Conv-cleaner backbone.
+
+**Concrete deployment recommendation today**: MobileNetV3-Large + static INT8
+PTQ — **0.86 INT8 macro-F1, 3.63 MB, ~430 beans/s on a single CPU thread**.
+
+**Caveats:** missed-defect rate ties at 0.047 (3 of 62 beans) across FP32
+models — the test set is too small to differentiate that metric. The relative
+ranking and the INT8 dynamics are the real signal here.
 
 ### 2026-05-19 — Phase 2: multi-view model + view-count robustness
 - The multi-view fusion model is exercised end-to-end via **pseudo-views** —

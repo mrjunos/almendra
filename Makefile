@@ -3,7 +3,10 @@
 # created by uv. Run `make help` for the full list.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-min lint format test info train eval export bench data clean
+.PHONY: help setup setup-min lint format test info train eval export bench sweep data ingest clean
+
+SWEEP_BACKBONES ?= mobilenet_v3_small,mobilenet_v3_large,efficientnet_b0
+SWEEP_EPOCHS ?= 20
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -46,6 +49,9 @@ export: ## Export a checkpoint to ONNX (+ INT8) with a parity check
 
 bench: ## Benchmark inference latency / throughput
 	uv run almendra bench $(ARGS)
+
+sweep: ## Backbone sweep (override SWEEP_BACKBONES, SWEEP_EPOCHS)
+	uv run almendra sweep --backbones $(SWEEP_BACKBONES) --epochs $(SWEEP_EPOCHS) $(ARGS)
 
 clean: ## Remove build artifacts, caches and run outputs
 	rm -rf outputs mlruns .pytest_cache .ruff_cache dist build
