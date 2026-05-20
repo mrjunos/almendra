@@ -63,9 +63,12 @@ make bench               # benchmark inference latency
 Prefer a graphical interface?
 
 ```bash
-uv sync --extra ui --extra train --extra capture
+uv sync --extra ui --extra train --extra export --extra capture
 make ui                  # local Streamlit app: tray capture, training, eval, predict
 ```
+
+See [`docs/ui.md`](docs/ui.md) for the full launch, end-to-end test flow, and
+troubleshooting guide.
 
 ## Repository layout
 
