@@ -57,6 +57,11 @@ capture = [
     # ArUco marker detection for the gridded-tray auto-segmentation pipeline.
     "opencv-contrib-python-headless>=4.9",
 ]
+ui = [
+    # Local Streamlit UI (Phase 6) — runs the toolkit end-to-end for non-CLI users.
+    "streamlit>=1.40",
+    "plotly>=5.20",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",

@@ -11,11 +11,12 @@ hardware-agnostic export/benchmark toolchain, and a documented physical capture
 protocol. The model is the focus — reliable and fast — but it must stay easy to
 re-train as better data arrives.
 
-> **Status: Phase 2 — multi-view model.** The full pipeline (`ingest → train →
-> eval → export → bench`) runs on public data — single-view baseline **0.92 test
-> macro-F1** — and the multi-view model is trained and shown to be view-count
-> robust. See [`docs/research-log.md`](docs/research-log.md) for live progress
-> and [the roadmap](#roadmap) below.
+> **Status: Phase 6 — local UI.** The full pipeline (`ingest → train → eval →
+> export → bench`) runs on public data; Phase 5's Pareto sweep picked
+> **MobileNetV3-Large + static INT8** as the current deploy choice (0.86 macro-F1,
+> 3.6 MB, ~430 beans/s on a single CPU thread); and a local Streamlit UI now
+> wraps the whole toolkit. See [`docs/research-log.md`](docs/research-log.md)
+> for the full log.
 
 ## The idea
 
@@ -59,6 +60,13 @@ make export              # export to ONNX (+ INT8) with a parity check
 make bench               # benchmark inference latency
 ```
 
+Prefer a graphical interface?
+
+```bash
+uv sync --extra ui --extra train --extra capture
+make ui                  # local Streamlit app: tray capture, training, eval, predict
+```
+
 ## Repository layout
 
 | Path | Purpose |
@@ -87,10 +95,10 @@ answer, tracked in [`docs/research-log.md`](docs/research-log.md):
 - **Phase 0** — Scaffolding ✓
 - **Phase 1** — Data pipeline + single-view public baseline ✓
 - **Phase 2** — Multi-view fusion model ✓
-- **Phase 3** — Physical capture protocol + proprietary Arabica data *(current)*
+- **Phase 3** — Physical capture protocol + proprietary Arabica data *(blocked on data)*
 - **Phase 4** — Multi-spectral illumination (UV, transillumination)
-- **Phase 5** — Speed: backbone sweep, INT8, hardware benchmark
-- **Phase 6** — Deployment reference + sorting-machine spec
+- **Phase 5** — Speed: backbone sweep, INT8, hardware benchmark ✓
+- **Phase 6** — Local Streamlit UI for the whole toolkit ✓
 - *Parallel research track* — NIR / hyperspectral internal-defect inspection
 
 ## Data & licensing

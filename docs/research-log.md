@@ -45,6 +45,39 @@ deployment tooling). Headline findings:
 
 ## Log
 
+### 2026-05-21 — Phase 6: local Streamlit UI
+
+- **New optional-deps group `ui`** (`streamlit`, `plotly`) and `almendra ui`
+  CLI subcommand that exec's `streamlit run` on `src/almendra/ui/app.py`. `make
+  ui` is the matching shortcut.
+- **Six pages** behind a sidebar radio: Home (dataset stats + recent runs +
+  inline wizard), Tray Capture, Train, Evaluate, Predict, Settings.
+- **Bilingual ES/EN from day one** — every visible string lives in a central
+  dict (`ui/components/i18n.py`) and pages read it through `t("key", lang)`. A
+  sidebar radio toggles the language; adding a third language is a translation
+  job, not a rewrite. Default: Spanish.
+- **Live training charts** — `train.loop` writes one JSONL line per epoch to
+  `outputs/<run>/live_metrics.jsonl` (controlled by env var
+  `ALMENDRA_LIVE_METRICS` so the CLI use case is untouched). The Train page
+  launches training as a subprocess, polls the file every ~2 s, and re-renders
+  a two-line Plotly chart (train_loss + val_macro_f1).
+- **Decoupled, file-based contract** — the UI is stateless across reruns;
+  everything it shows (runs, checkpoints, ONNX, metrics) is discovered from
+  disk under `outputs/`. Anything that writes the same JSONL schema works with
+  the UI.
+- **Inline wizard** on Home with three "press to go" buttons that walk
+  Ingest → Train → Eval with sensible defaults. Advanced controls (gated
+  fusion, view-dropout, augmentation toggles) live behind an `Advanced`
+  expander on the Train page so they don't intimidate first-time users.
+- **Tests** — `streamlit.testing.v1.AppTest` smoke-tests render every page in
+  ES *and* EN (12 cases) without exceptions; the i18n dict is checked for
+  complete coverage; the live-metrics JSONL writer/reader has its own unit
+  test. All 45 tests in the suites that don't require torch/onnxruntime pass.
+- **Scope split** — Phase 6.0 (this PR) ships the six pages, the CLI/Make
+  entrypoints and tests. Phase 6.1 will add: a dedicated **Labelling** page
+  with hotkeys + IAA reporting, an **Export & Bench** page, a model-package
+  zip exporter, and a "Demo mode" using the public Roboflow data.
+
 ### 2026-05-20 — Phase 5: backbone sweep + static INT8 PTQ
 
 - Static INT8 PTQ implemented (`quantize_int8_static` in `src/almendra/export/exporter.py`):
