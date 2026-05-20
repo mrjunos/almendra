@@ -24,7 +24,7 @@ def _driver_script(page: str, lang: str) -> str:
     """A standalone Streamlit script that imports and runs one page."""
     return textwrap.dedent(
         f"""
-        from almendra.ui.pages import page_{page}
+        from almendra.ui.views import page_{page}
         page_{page}.render({lang!r})
         """
     ).strip()
@@ -42,9 +42,9 @@ def test_page_renders_without_exception(tmp_path: Path, page: str, lang: str) ->
 
 def test_render_signature_consistent() -> None:
     """Every page module must expose ``render(lang)`` — keeps the dispatcher honest."""
-    from almendra.ui import pages
+    from almendra.ui import views
 
     for page in PAGES:
-        module = getattr(pages, f"page_{page}")
+        module = getattr(views, f"page_{page}")
         sig = inspect.signature(module.render)
         assert "lang" in sig.parameters, f"page_{page}.render must accept lang"

@@ -12,7 +12,7 @@ import streamlit as st
 
 from almendra.ui.components.i18n import t
 from almendra.ui.components.state import current_lang, language_toggle
-from almendra.ui.pages import (
+from almendra.ui.views import (
     page_evaluate,
     page_home,
     page_predict,
