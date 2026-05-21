@@ -31,7 +31,22 @@ def configure_page() -> None:
     )
 
 
+_PAGE_KEY = "almendra.current_page"
+_PENDING_KEY = "almendra.pending_page"
+_RADIO_KEY = "almendra.page_radio"
+
+
 def render_sidebar() -> str:
+    """Render the sidebar and return the active page key.
+
+    Navigation has two entry points: the sidebar radio (user clicks an option)
+    and the wizard buttons on Home (programmatic switch). Streamlit normally
+    refuses to let outside code reassign a widget's session_state key after it
+    has been instantiated, so to honour the wizard's request we *delete* the
+    radio's own key — that forces Streamlit to re-init the widget with our
+    ``index=`` on the next render. Source of truth lives in ``_PAGE_KEY`` (a
+    plain non-widget key).
+    """
     lang = language_toggle()
     st.sidebar.markdown(f"### {t('app.title', lang)}")
     st.sidebar.caption(t("app.tagline", lang))
@@ -45,13 +60,28 @@ def render_sidebar() -> str:
         "predict": t("nav.predict", lang),
         "settings": t("nav.settings", lang),
     }
+    keys = list(pages.keys())
+
+    pending = st.session_state.pop(_PENDING_KEY, None)
+    if pending in keys:
+        # Drop the radio's remembered pick so ``index=`` actually takes effect.
+        st.session_state.pop(_RADIO_KEY, None)
+        st.session_state[_PAGE_KEY] = pending
+
+    current = st.session_state.get(_PAGE_KEY, "home")
+    index = keys.index(current) if current in keys else 0
+
     pick = st.sidebar.radio(
         label="nav",
-        options=list(pages.keys()),
+        options=keys,
+        index=index,
         format_func=lambda key: pages[key],
         label_visibility="collapsed",
-        key="almendra.page",
+        key=_RADIO_KEY,
     )
+    # Mirror the radio's pick into our source-of-truth key so the next rerun
+    # starts on the same page.
+    st.session_state[_PAGE_KEY] = pick
     return pick
 
 
