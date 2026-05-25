@@ -3,7 +3,7 @@
 # created by uv. Run `make help` for the full list.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-min lint format test info train eval export bench sweep data ingest ui clean
+.PHONY: help setup setup-min lint format test e2e info train eval export bench sweep data ingest ui clean
 
 SWEEP_BACKBONES ?= mobilenet_v3_small,mobilenet_v3_large,efficientnet_b0
 SWEEP_EPOCHS ?= 20
@@ -26,8 +26,12 @@ format: ## Auto-format the codebase
 	uv run ruff format .
 	uv run ruff check --fix .
 
-test: ## Run the test suite
-	uv run pytest
+test: ## Run the fast test suite (excludes the slow e2e gate)
+	uv run pytest -m "not e2e"
+
+e2e: ## Run the full-browser E2E visual test + record video (PWHEADED=1 to watch)
+	uv run playwright install chromium
+	uv run pytest -m e2e
 
 info: ## Print the canonical taxonomy and project status
 	uv run almendra info

@@ -38,6 +38,7 @@ _STRINGS: dict[str, dict[Lang, str]] = {
     "nav.tray": {"es": "📷 Bandeja", "en": "📷 Tray Capture"},
     "nav.train": {"es": "🧠 Entrenar", "en": "🧠 Train"},
     "nav.evaluate": {"es": "📊 Evaluar", "en": "📊 Evaluate"},
+    "nav.quantize": {"es": "⚡ Cuantizar", "en": "⚡ Quantize"},
     "nav.predict": {"es": "🚀 Predecir", "en": "🚀 Predict"},
     "nav.settings": {"es": "⚙️ Ajustes", "en": "⚙️ Settings"},
     # --- home ---
@@ -171,6 +172,32 @@ _STRINGS: dict[str, dict[Lang, str]] = {
         "es": "{pred} ⟵ {true}",
         "en": "{pred} ⟵ {true}",
     },
+    # --- quantize ---
+    "quantize.title": {"es": "Cuantizar / Exportar", "en": "Quantize / Export"},
+    "quantize.help": {
+        "es": "Exporta un checkpoint a ONNX y, opcionalmente, cuantiza a INT8 "
+        "para desplegar más liviano y rápido.",
+        "en": "Export a checkpoint to ONNX and optionally quantize to INT8 for a "
+        "lighter, faster deployment artifact.",
+    },
+    "quantize.no_checkpoints": {
+        "es": "No hay checkpoints. Entrena un modelo primero.",
+        "en": "No checkpoints found. Train a model first.",
+    },
+    "quantize.checkpoint": {"es": "Checkpoint", "en": "Checkpoint"},
+    "quantize.mode": {"es": "Modo de cuantización", "en": "Quantization mode"},
+    "quantize.run_btn": {"es": "Exportar / Cuantizar", "en": "Export / Quantize"},
+    "quantize.parity_ok": {
+        "es": "✅ Exportado — la paridad numérica con PyTorch pasó.",
+        "en": "✅ Exported — numerical parity with PyTorch passed.",
+    },
+    "quantize.float_model": {"es": "ONNX float", "en": "Float ONNX"},
+    "quantize.int8_model": {"es": "ONNX INT8", "en": "INT8 ONNX"},
+    "quantize.reduction": {"es": "Reducción de tamaño", "en": "Size reduction"},
+    "quantize.int8_skipped": {
+        "es": "INT8 omitido (ver logs).",
+        "en": "INT8 skipped (see logs).",
+    },
     # --- predict ---
     "predict.title": {"es": "Predecir", "en": "Predict"},
     "predict.upload": {
@@ -186,6 +213,22 @@ _STRINGS: dict[str, dict[Lang, str]] = {
     },
     "predict.verdict_accept": {"es": "✅ Acepta", "en": "✅ Accept"},
     "predict.verdict_reject": {"es": "❌ Rechaza", "en": "❌ Reject"},
+    "predict.compare": {
+        "es": "Comparar float vs INT8",
+        "en": "Compare float vs INT8",
+    },
+    "predict.compare_unavailable": {
+        "es": "La corrida seleccionada no tiene ambos modelos (float e INT8). "
+        "Exporta con INT8 en la página Cuantizar.",
+        "en": "The selected run does not have both float and INT8 models. Export "
+        "with INT8 on the Quantize page.",
+    },
+    "predict.model_float": {"es": "Float", "en": "Float"},
+    "predict.model_int8": {"es": "INT8", "en": "INT8"},
+    "predict.agreement": {"es": "Coinciden", "en": "Agreement"},
+    "predict.agreement_yes": {"es": "✅ Igual top-1", "en": "✅ Same top-1"},
+    "predict.agreement_no": {"es": "⚠️ Difieren", "en": "⚠️ Differ"},
+    "predict.latency": {"es": "Latencia", "en": "Latency"},
     # --- settings ---
     "settings.title": {"es": "Ajustes", "en": "Settings"},
     "settings.taxonomy": {"es": "Taxonomía canónica", "en": "Canonical taxonomy"},

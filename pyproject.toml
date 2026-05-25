@@ -66,6 +66,11 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
 ]
+e2e = [
+    # Full-browser visual E2E test (Playwright drives the live Streamlit UI).
+    "playwright>=1.48",
+    "pytest>=8.0",
+]
 
 [project.scripts]
 almendra = "almendra.cli:main"
@@ -93,3 +98,4 @@ select = ["E", "F", "I", "W", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["e2e: full-browser end-to-end visual test (slow; needs Chromium)"]

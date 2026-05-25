@@ -42,3 +42,6 @@ data/**/*.jpeg
 # OS
 .DS_Store
 Thumbs.db
+
+# E2E visual-test recordings (videos are CI artifacts, not committed)
+tests/e2e/recordings/

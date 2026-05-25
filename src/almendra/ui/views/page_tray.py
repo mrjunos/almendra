@@ -72,6 +72,73 @@ def _save_session(
     return out_dir
 
 
+_RESULT_KEY = "almendra.tray.result"
+
+
+def _process(side_a_file, side_b_file, spec, lang: Lang) -> None:
+    """Segment the uploaded photo(s) and stash the result in session_state.
+
+    Persisting here (rather than rendering inline behind the transient Process
+    button) is what lets the Save-crops button survive the next rerun — clicking
+    Save reruns the script with Process *unclicked*, so anything gated on the
+    Process click would vanish before the save could run.
+    """
+    from almendra.datasets import tray
+
+    st.session_state.pop(_RESULT_KEY, None)
+    if side_a_file is None:
+        st.warning(f"{t('tray.side_a', lang)} — {t('common.required', lang)}")
+        return
+
+    side_a_img = _read_uploaded_image(side_a_file)
+    try:
+        rect_a = tray.rectify(side_a_img, spec)
+    except tray.TrayError:
+        st.error(t("tray.error_markers", lang))
+        return
+    beans_a = tray.extract_from_rectified(rect_a, spec)
+    overlay_a = tray.draw_overlay(rect_a, spec, beans_a)
+
+    total = spec.rows * spec.cols
+    result: dict = {
+        "orig_a": np.asarray(_bgr_to_rgb(side_a_img)),
+        "overlay_a": np.asarray(_bgr_to_rgb(overlay_a)),
+        "n_a": len(beans_a),
+        "total": total,
+        "default_id": time.strftime("%Y%m%d-%H%M%S"),
+        "spec_dict": {
+            "rows": spec.rows,
+            "cols": spec.cols,
+            "flip": spec.flip,
+            "marker_dict": spec.marker_dict,
+            "margin_frac": spec.margin_frac,
+            "well_frac": spec.well_frac,
+        },
+    }
+    paired: dict[tuple[int, int], list[np.ndarray]] = {
+        well: [crop] for well, crop in beans_a.items()
+    }
+
+    side_b_img = _read_uploaded_image(side_b_file) if side_b_file is not None else None
+    if side_b_img is not None:
+        try:
+            rect_b = tray.rectify(side_b_img, spec)
+        except tray.TrayError:
+            st.error(t("tray.error_markers", lang))
+            return
+        beans_b = tray.extract_from_rectified(rect_b, spec)
+        result["orig_b"] = np.asarray(_bgr_to_rgb(side_b_img))
+        result["overlay_b"] = np.asarray(_bgr_to_rgb(tray.draw_overlay(rect_b, spec, beans_b)))
+        result["n_b"] = len(beans_b)
+        paired = tray.pair_sides(beans_a, beans_b, spec)
+        two_view = sum(1 for views in paired.values() if len(views) == 2)
+        result["two_view"] = two_view
+        result["single_view"] = len(paired) - two_view
+
+    result["paired"] = paired
+    st.session_state[_RESULT_KEY] = result
+
+
 def render(lang: Lang) -> None:
     st.title(t("tray.title", lang))
     st.info(t("tray.help_banner", lang))
@@ -114,73 +181,39 @@ def render(lang: Lang) -> None:
             t("tray.well_frac", lang), min_value=0.5, max_value=1.0, value=0.85, step=0.01
         )
 
-    process = st.button(t("tray.process", lang), type="primary", use_container_width=True)
-    if not process:
+    if st.button(t("tray.process", lang), type="primary", use_container_width=True):
+        spec = tray.TraySpec(
+            rows=int(rows),
+            cols=int(cols),
+            flip=flip,
+            marker_dict=marker_dict,
+            margin_frac=float(margin_frac),
+            well_frac=float(well_frac),
+        )
+        _process(side_a_file, side_b_file, spec, lang)
+
+    result = st.session_state.get(_RESULT_KEY)
+    if not result:
         return
-
-    if side_a_file is None:
-        st.warning(f"{t('tray.side_a', lang)} — {t('common.required', lang)}")
-        return
-
-    spec = tray.TraySpec(
-        rows=int(rows),
-        cols=int(cols),
-        flip=flip,
-        marker_dict=marker_dict,
-        margin_frac=float(margin_frac),
-        well_frac=float(well_frac),
-    )
-
-    side_a_img = _read_uploaded_image(side_a_file)
-    side_b_img = _read_uploaded_image(side_b_file) if side_b_file is not None else None
-
-    try:
-        rect_a = tray.rectify(side_a_img, spec)
-    except tray.TrayError:
-        st.error(t("tray.error_markers", lang))
-        return
-
-    beans_a = tray.extract_from_rectified(rect_a, spec)
-    overlay_a = tray.draw_overlay(rect_a, spec, beans_a)
 
     st.subheader("A")
     a_orig, a_rect = st.columns(2)
-    a_orig.image(_bgr_to_rgb(side_a_img), caption=t("tray.original", lang))
-    a_rect.image(_bgr_to_rgb(overlay_a), caption=t("tray.rectified", lang))
-    st.caption(t("tray.beans_found", lang, n=len(beans_a), total=spec.rows * spec.cols))
+    a_orig.image(result["orig_a"], caption=t("tray.original", lang))
+    a_rect.image(result["overlay_a"], caption=t("tray.rectified", lang))
+    st.caption(t("tray.beans_found", lang, n=result["n_a"], total=result["total"]))
 
-    paired: dict[tuple[int, int], list[np.ndarray]] = {
-        well: [crop] for well, crop in beans_a.items()
-    }
-    if side_b_img is not None:
-        try:
-            rect_b = tray.rectify(side_b_img, spec)
-        except tray.TrayError:
-            st.error(t("tray.error_markers", lang))
-            return
-        beans_b = tray.extract_from_rectified(rect_b, spec)
-        overlay_b = tray.draw_overlay(rect_b, spec, beans_b)
+    if "overlay_b" in result:
         st.subheader("B")
         b_orig, b_rect = st.columns(2)
-        b_orig.image(_bgr_to_rgb(side_b_img), caption=t("tray.original", lang))
-        b_rect.image(_bgr_to_rgb(overlay_b), caption=t("tray.rectified", lang))
-        st.caption(t("tray.beans_found", lang, n=len(beans_b), total=spec.rows * spec.cols))
-        paired = tray.pair_sides(beans_a, beans_b, spec)
-        two_view = sum(1 for views in paired.values() if len(views) == 2)
-        single = len(paired) - two_view
-        st.success(t("tray.paired_summary", lang, two=two_view, one=single))
+        b_orig.image(result["orig_b"], caption=t("tray.original", lang))
+        b_rect.image(result["overlay_b"], caption=t("tray.rectified", lang))
+        st.caption(t("tray.beans_found", lang, n=result["n_b"], total=result["total"]))
+        st.success(
+            t("tray.paired_summary", lang, two=result["two_view"], one=result["single_view"])
+        )
 
     st.markdown("---")
-    default_id = time.strftime("%Y%m%d-%H%M%S")
-    session_id = st.text_input(t("tray.session_id", lang), value=default_id)
+    session_id = st.text_input(t("tray.session_id", lang), value=result["default_id"])
     if st.button(t("tray.save_crops", lang), type="primary"):
-        spec_dict = {
-            "rows": spec.rows,
-            "cols": spec.cols,
-            "flip": spec.flip,
-            "marker_dict": spec.marker_dict,
-            "margin_frac": spec.margin_frac,
-            "well_frac": spec.well_frac,
-        }
-        out_dir = _save_session(paired, session_id, spec_dict)
+        out_dir = _save_session(result["paired"], session_id, result["spec_dict"])
         st.success(f"{t('tray.saved_to', lang)}: `{out_dir}`")
