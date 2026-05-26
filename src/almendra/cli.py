@@ -10,6 +10,7 @@ Subcommands
   bench    benchmark inference latency / throughput
   sweep    train + eval + export + bench across backbones (RQ3/RQ4)
   tray-check  segment beans from gridded-tray photos (capture data prep)
+  db       manage the centralized bean catalog (init / migrate / export-manifest / audit)
   ui       launch the local Streamlit UI (Phase 6)
 
 The pipeline subcommands accept Hydra-style ``key=value`` overrides, e.g.
@@ -141,6 +142,55 @@ def cmd_ui(args: argparse.Namespace) -> int:
     return int(stcli.main())
 
 
+def cmd_db(args: argparse.Namespace) -> int:
+    """Centralized catalog: init/seed, migrate the manifest in, export, audit."""
+    from almendra.db.audit import print_audit
+    from almendra.db.catalog import default_db_path, get_engine, get_session, init_db
+    from almendra.db.export import export_manifest
+    from almendra.db.migrate import migrate_manifest
+    from almendra.db.seed import seed_all
+
+    db_path = args.db or default_db_path()
+    engine = get_engine(db_path)
+
+    if args.db_command == "init":
+        init_db(engine)
+        with get_session(engine) as session:
+            seed_all(session)
+        print(f"catalog initialised + seeded -> {db_path}")
+        return 0
+
+    if args.db_command == "migrate":
+        init_db(engine)
+        with get_session(engine) as session:
+            seed_all(session)
+            counts = migrate_manifest(session, manifest_path=args.manifest)
+        print(
+            f"migrated {counts['beans']} beans ({counts['skipped']} already present) -> {db_path}"
+        )
+        return 0
+
+    if args.db_command == "export-manifest":
+        provenance = None if args.all_provenance else ("public_dataset",)
+        with get_session(engine) as session:
+            out = export_manifest(
+                session,
+                out_path=args.out,
+                good_only=not args.include_not_good,
+                provenance_types=provenance,
+                min_trust=args.min_trust,
+            )
+        print(f"manifest exported -> {out}")
+        return 0
+
+    if args.db_command == "audit":
+        with get_session(engine) as session:
+            print_audit(session)
+        return 0
+
+    raise SystemExit(f"unknown db command: {args.db_command}")
+
+
 def cmd_tray_check(args: argparse.Namespace) -> int:
     """Segment beans from gridded-tray photos and write crops + a debug overlay."""
     from pathlib import Path
@@ -269,6 +319,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="well crop window as a fraction of the cell pitch (default: 0.85)",
     )
     p_tray.set_defaults(func=cmd_tray_check)
+
+    p_db = sub.add_parser("db", help="manage the centralized bean catalog")
+    p_db.add_argument("--db", help="catalog SQLite path (default: data/catalog.db)")
+    db_sub = p_db.add_subparsers(dest="db_command", required=True)
+    db_sub.add_parser("init", help="create + seed the catalog (taxonomy + sources)")
+    p_db_mig = db_sub.add_parser("migrate", help="import the manifest into the catalog")
+    p_db_mig.add_argument("--manifest", help="manifest path (default: the processed manifest)")
+    p_db_exp = db_sub.add_parser("export-manifest", help="export a training manifest")
+    p_db_exp.add_argument("--out", help="output manifest path (default: the processed manifest)")
+    p_db_exp.add_argument(
+        "--all-provenance", action="store_true", help="include private (proprietary) beans too"
+    )
+    p_db_exp.add_argument(
+        "--include-not-good", action="store_true", help="include beans flagged is_good=false"
+    )
+    p_db_exp.add_argument(
+        "--min-trust", type=float, default=0.0, help="drop defect labels below this trust"
+    )
+    db_sub.add_parser("audit", help="print a catalog health report")
+    p_db.set_defaults(func=cmd_db)
 
     return parser
 

@@ -45,3 +45,7 @@ Thumbs.db
 
 # E2E visual-test recordings (videos are CI artifacts, not committed)
 tests/e2e/recordings/
+
+# Catalog DB — regenerable from the manifest via `almendra db migrate` (kept out of git)
+data/catalog.db
+data/*.db
