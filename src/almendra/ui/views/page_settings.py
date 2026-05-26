@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import streamlit as st
+import yaml
 
 from almendra.ui.components.i18n import Lang, t
 from almendra.ui.discovery import manifest_path, outputs_root, project_root
@@ -15,6 +16,26 @@ def _read_yaml(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except OSError as exc:
         return f"# could not read {path}: {exc}"
+
+
+def _source_summary(sources_dir: Path) -> list[dict]:
+    """One row per adapter: name, species, licence, commercial use, status."""
+    rows: list[dict] = []
+    for path in sorted(sources_dir.glob("*.yaml")):
+        try:
+            cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        rows.append(
+            {
+                "source": cfg.get("name", path.stem),
+                "species": cfg.get("species", "—"),
+                "license": cfg.get("license", "—"),
+                "commercial": cfg.get("commercial_use"),
+                "status": cfg.get("status", "—"),
+            }
+        )
+    return rows
 
 
 def render(lang: Lang) -> None:
@@ -45,6 +66,12 @@ def render(lang: Lang) -> None:
     st.subheader(t("settings.sources", lang))
     sources_dir = project_root() / "data" / "sources"
     if sources_dir.is_dir():
+        summary = _source_summary(sources_dir)
+        if summary:
+            st.dataframe(summary, hide_index=True, use_container_width=True)
+            blocked = [r["source"] for r in summary if r["status"] == "license_unverified"]
+            if blocked:
+                st.warning(t("settings.sources_blocked", lang, sources=", ".join(blocked)))
         for yaml_path in sorted(sources_dir.glob("*.yaml")):
             with st.expander(yaml_path.stem):
                 st.code(_read_yaml(yaml_path), language="yaml")

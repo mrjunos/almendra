@@ -22,6 +22,26 @@ from almendra.db.models import (
 from almendra.taxonomy import get_taxonomy
 
 
+def _reason_of(notes: str) -> str:
+    """Bucket a curation note into a coarse reason for the audit."""
+    n = (notes or "").lower()
+    if "duplicate" in n:
+        return "duplicate"
+    if "too small" in n:
+        return "too_small"
+    if "near-blank" in n:
+        return "near_blank"
+    return "other"
+
+
+def _trust_bucket(trust: float) -> str:
+    if trust < 0.3:
+        return "low (<0.3)"
+    if trust < 0.7:
+        return "mid (0.3–0.7)"
+    return "high (≥0.7)"
+
+
 def audit_report(session: Session) -> dict:
     """Collect catalog statistics + integrity flags into a dict."""
     taxonomy = get_taxonomy()
@@ -34,6 +54,7 @@ def audit_report(session: Session) -> dict:
     by_provenance: Counter[str] = Counter()
     by_source: Counter[str] = Counter()
     by_split: Counter[str] = Counter()
+    not_good_by_reason: Counter[str] = Counter()
     for bean, lot, source in session.exec(
         select(Bean, Lot, Source)
         .join(Lot, Bean.lot_id == Lot.id)
@@ -42,11 +63,15 @@ def audit_report(session: Session) -> dict:
         by_provenance[lot.provenance_type] += 1
         by_source[source.name] += 1
         by_split[bean.split] += 1
+        if not bean.is_good:
+            not_good_by_reason[_reason_of(bean.notes)] += 1
 
     by_primary: Counter[str] = Counter()
     by_label_source: Counter[str] = Counter()
+    trust_hist: Counter[str] = Counter()
     for d in session.exec(select(BeanDefect)).all():
         by_label_source[d.label_source] += 1
+        trust_hist[_trust_bucket(d.trust)] += 1
         if d.is_primary:
             by_primary[defect_name.get(d.defect_index, str(d.defect_index))] += 1
 
@@ -79,6 +104,8 @@ def audit_report(session: Session) -> dict:
         "by_split": dict(by_split),
         "by_primary_class": dict(by_primary.most_common()),
         "by_label_source": dict(by_label_source),
+        "not_good_by_reason": dict(not_good_by_reason.most_common()),
+        "trust_histogram": dict(trust_hist),
         "license_blocked_with_beans": blocked,
     }
 
@@ -99,6 +126,9 @@ def print_audit(session: Session) -> dict:
     _section("by split", r["by_split"])
     _section("by primary defect class", r["by_primary_class"])
     _section("by label source", r["by_label_source"])
+    _section("label trust", r["trust_histogram"])
+    if r["not_good_by_reason"]:
+        _section("excluded (not-good) by reason", r["not_good_by_reason"])
 
     if r["license_blocked_with_beans"]:
         print("\n⚠️  license-blocked sources holding beans (should not be exported):")
