@@ -32,9 +32,22 @@ def _preprocess(image: Image.Image, size: int) -> np.ndarray:
     return chw[None, None].astype(np.float32)
 
 
-def _softmax(logits: np.ndarray) -> np.ndarray:
-    exp = np.exp(logits - logits.max(axis=-1, keepdims=True))
-    return exp / exp.sum(axis=-1, keepdims=True)
+_THRESHOLD = 0.5
+
+
+def _sigmoid(logits: np.ndarray) -> np.ndarray:
+    """Per-class probabilities — the model is multi-label (independent sigmoids)."""
+    return 1.0 / (1.0 + np.exp(-logits))
+
+
+def _is_reject(probs: np.ndarray, class_names, taxonomy) -> bool:
+    """Reject if any reject-worthy (defect) class fires above the threshold."""
+    if taxonomy is None:
+        return False
+    return any(
+        p >= _THRESHOLD and i < len(class_names) and not taxonomy.is_accept(class_names[i])
+        for i, p in enumerate(probs)
+    )
 
 
 @dataclass
@@ -59,7 +72,7 @@ def _infer(onnx_path: Path, image: Image.Image) -> _Inference:
     t0 = time.perf_counter()
     logits = session.run(None, {input_name: tensor})[0][0]
     latency_ms = (time.perf_counter() - t0) * 1000.0
-    return _Inference(_softmax(logits), int(np.argmax(logits)), latency_ms)
+    return _Inference(_sigmoid(logits), int(np.argmax(logits)), latency_ms)
 
 
 def _render_result(
@@ -73,8 +86,8 @@ def _render_result(
     container.metric(t("predict.confidence", lang), f"{probs[top_idx]:.1%}")
     container.caption(f"{t('predict.latency', lang)}: {result.latency_ms:.1f} ms")
     if taxonomy is not None:
-        accept = taxonomy.is_accept(top_name)
-        verdict_key = "predict.verdict_accept" if accept else "predict.verdict_reject"
+        reject = _is_reject(probs, class_names, taxonomy)
+        verdict_key = "predict.verdict_reject" if reject else "predict.verdict_accept"
         container.markdown(f"### {t(verdict_key, lang)}")
 
     order = np.argsort(probs)[::-1][:3]
@@ -166,8 +179,8 @@ def render(lang: Lang) -> None:
     headline_col.metric(t("predict.predicted", lang), top_name)
     headline_col.metric(t("predict.confidence", lang), f"{result.probs[result.top_idx]:.1%}")
     if taxonomy is not None:
-        accept = taxonomy.is_accept(top_name)
-        verdict_key = "predict.verdict_accept" if accept else "predict.verdict_reject"
+        reject = _is_reject(result.probs, class_names, taxonomy)
+        verdict_key = "predict.verdict_reject" if reject else "predict.verdict_accept"
         verdict_col.markdown(f"### {t(verdict_key, lang)}")
 
     st.subheader(t("predict.top3", lang))

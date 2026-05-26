@@ -87,13 +87,21 @@ def _collect_misclassified(
     errors: list[dict[str, Any]] = []
     class_names = taxonomy.class_names()
     record_iter = iter(records)
+
+    def _names(indices) -> str:
+        return "+".join(class_names[i] for i in indices) or "—"
+
     with torch.no_grad():
         for views, labels in loader:
-            preds = model(views.to(device)).argmax(1).cpu().tolist()
-            labels_list = labels.tolist()
-            for pred, true in zip(preds, labels_list, strict=True):
+            # Multi-label: a bean is "wrong" when its predicted defect set differs
+            # from the true set (thresholded sigmoid).
+            pred_mat = (torch.sigmoid(model(views.to(device))) >= 0.5).int().cpu().numpy()
+            true_mat = labels.int().cpu().numpy()
+            for pred_row, true_row in zip(pred_mat, true_mat, strict=True):
                 rec = next(record_iter)
-                if pred != true and len(errors) < max_items:
+                pred_idx = [i for i, v in enumerate(pred_row) if v]
+                true_idx = [i for i, v in enumerate(true_row) if v]
+                if pred_idx != true_idx and len(errors) < max_items:
                     image_path = Path(rec.views[0])
                     if not image_path.is_absolute():
                         image_path = processed_dir() / image_path
@@ -101,8 +109,8 @@ def _collect_misclassified(
                         {
                             "bean_id": rec.bean_id,
                             "image": image_path,
-                            "true": class_names[true],
-                            "pred": class_names[pred],
+                            "true": _names(true_idx),
+                            "pred": _names(pred_idx),
                         }
                     )
             if len(errors) >= max_items:

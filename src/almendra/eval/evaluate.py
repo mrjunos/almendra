@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from almendra.datasets.manifest import filter_split, read_manifest
 from almendra.datasets.multiview import MultiViewBeanDataset
 from almendra.datasets.transforms import build_transforms
-from almendra.eval.metrics import compute_metrics, confusion, missed_defect_rate
+from almendra.eval.metrics import DEFAULT_THRESHOLD, compute_metrics, missed_defect_rate
 from almendra.models.classifier import build_model
 from almendra.paths import processed_dir
 from almendra.taxonomy import get_taxonomy
@@ -30,11 +30,13 @@ def _load_model(ckpt_path: Path, model_cfg, num_classes: int, device):
 
 
 @torch.no_grad()
-def _predict(model, loader, device):
+def _predict(model, loader, device, threshold: float = DEFAULT_THRESHOLD):
+    """Return (y_true, y_pred) as (N, C) multi-label indicator matrices."""
     preds, targets = [], []
     for views, labels in loader:
-        preds.append(model(views.to(device)).argmax(1).cpu())
-        targets.append(labels)
+        logits = model(views.to(device))
+        preds.append((torch.sigmoid(logits) >= threshold).int().cpu())
+        targets.append(labels.int())
     return torch.cat(targets).numpy(), torch.cat(preds).numpy()
 
 
@@ -96,9 +98,10 @@ def run(
     )
     targets, preds = _predict(model, loader, device)
 
+    reject_indices = [c.index for c in taxonomy.defect_classes.values() if not c.accept]
     metrics = compute_metrics(targets, preds, num_classes)
-    metrics["missed_defect_rate"] = missed_defect_rate(targets, preds, taxonomy.index_of("sound"))
-    metrics["confusion_matrix"] = confusion(targets, preds, num_classes).tolist()
+    metrics["missed_defect_rate"] = missed_defect_rate(targets, preds, reject_indices)
+    metrics["confusion_matrix"] = None  # not defined for multi-label; per-class table instead
 
     print(
         f"\n=== evaluation on '{split}' split "

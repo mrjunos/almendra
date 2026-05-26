@@ -26,6 +26,7 @@ from torch.utils.data import Dataset
 from almendra.datasets.manifest import BeanRecord
 from almendra.datasets.pseudoview import pseudo_view
 from almendra.paths import processed_dir
+from almendra.taxonomy import get_taxonomy
 
 
 class MultiViewBeanDataset(Dataset):
@@ -37,6 +38,7 @@ class MultiViewBeanDataset(Dataset):
         view_dropout: float = 0.0,
         pseudo_views: bool = False,
         root: str | Path | None = None,
+        num_classes: int | None = None,
     ):
         self.records = list(records)
         self.transform = transform
@@ -44,6 +46,10 @@ class MultiViewBeanDataset(Dataset):
         self.view_dropout = view_dropout
         self.pseudo_views = pseudo_views
         self.root = Path(root) if root is not None else processed_dir()
+        # Multi-label: target is a multi-hot vector over the defect classes.
+        self.num_classes = (
+            num_classes if num_classes is not None else get_taxonomy().num_defect_classes
+        )
 
     def __len__(self) -> int:
         return len(self.records)
@@ -61,7 +67,16 @@ class MultiViewBeanDataset(Dataset):
             return [record.views[i % len(record.views)] for i in range(self.num_views)]
         return self._pick_views(record.views)
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
+    def _target(self, record: BeanRecord) -> torch.Tensor:
+        """Multi-hot defect vector. Falls back to the single primary for legacy records."""
+        indices = record.defects or [record.defect_index]
+        target = torch.zeros(self.num_classes, dtype=torch.float32)
+        for idx in indices:
+            if 0 <= idx < self.num_classes:
+                target[idx] = 1.0
+        return target
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         record = self.records[idx]
         views = []
         for i, rel_path in enumerate(self._view_sources(record)):
@@ -74,4 +89,4 @@ class MultiViewBeanDataset(Dataset):
             if self.view_dropout and i > 0 and random.random() < self.view_dropout:
                 tensor = torch.zeros_like(tensor)
             views.append(tensor)
-        return torch.stack(views, dim=0), record.defect_index
+        return torch.stack(views, dim=0), self._target(record)

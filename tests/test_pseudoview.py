@@ -53,7 +53,9 @@ def test_multiview_dataset_with_pseudo_views(tmp_path):
     )
     views, label = dataset[0]
     assert views.shape == (4, 3, 48, 48)
-    assert label == 0
+    # multi-label target: a multi-hot vector with `sound` (index 0) set
+    assert label.shape == (18,)
+    assert label[0] == 1.0 and label.sum() == 1.0
     # the four pseudo-views are genuinely different orientations
     assert not torch.equal(views[0], views[1])
 
