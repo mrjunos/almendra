@@ -27,5 +27,32 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
-      - name: Tests
-        run: uv run pytest
+      - name: Tests (fast — excludes the e2e gate)
+        run: uv run pytest -m "not e2e"
+
+  e2e:
+    # Full-browser happy-path gate: launches the real Streamlit UI and drives
+    # Tray → Train → Evaluate → Quantize → Predict, recording the run to video.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install (core + dev + train + export + capture + ui + e2e)
+        run: uv sync --extra dev --extra train --extra export --extra capture --extra ui --extra e2e
+
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: E2E visual test
+        run: uv run pytest -m e2e
+
+      - name: Upload recording
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-recording
+          path: tests/e2e/recordings/
+          if-no-files-found: warn

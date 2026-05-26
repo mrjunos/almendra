@@ -16,6 +16,7 @@ from almendra.ui.views import (
     page_evaluate,
     page_home,
     page_predict,
+    page_quantize,
     page_settings,
     page_train,
     page_tray,
@@ -57,6 +58,7 @@ def render_sidebar() -> str:
         "tray": t("nav.tray", lang),
         "train": t("nav.train", lang),
         "evaluate": t("nav.evaluate", lang),
+        "quantize": t("nav.quantize", lang),
         "predict": t("nav.predict", lang),
         "settings": t("nav.settings", lang),
     }
@@ -97,6 +99,8 @@ def main() -> None:
         page_train.render(lang)
     elif page == "evaluate":
         page_evaluate.render(lang)
+    elif page == "quantize":
+        page_quantize.render(lang)
     elif page == "predict":
         page_predict.render(lang)
     elif page == "settings":

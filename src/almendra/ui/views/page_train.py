@@ -92,23 +92,29 @@ def render(lang: Lang) -> None:
     pid = int(get_state("almendra.train.pid", 0))
     metrics_path = get_state("almendra.train.metrics_path", "")
     running = bool(pid) and is_running(pid)
+    # "Done" is driven by the metrics `done` event, not process liveness: the OS
+    # process can still be reaping when the final metric lands, and the
+    # auto-refresh below stops once `done` — so keying the status on liveness
+    # would leave the page stuck on "Training…".
+    snapshot = read_live_metrics(metrics_path) if metrics_path else None
+    done = bool(snapshot and snapshot.done)
 
     start_col, stop_col, status_col = st.columns([1, 1, 3])
     with start_col:
         start_clicked = st.button(
             t("train.start_btn", lang),
             type="primary",
-            disabled=running,
+            disabled=running and not done,
             use_container_width=True,
         )
     with stop_col:
         stop_clicked = st.button(
             t("train.stop_btn", lang),
-            disabled=not running,
+            disabled=not running or done,
             use_container_width=True,
         )
     with status_col:
-        if running:
+        if running and not done:
             st.info(f"⏳ {t('train.running', lang)} (pid {pid})")
         elif metrics_path:
             st.success(f"✅ {t('train.done', lang)}")
@@ -128,12 +134,10 @@ def render(lang: Lang) -> None:
         set_state("almendra.train.pid", 0)
         st.rerun()
 
-    metrics_path = get_state("almendra.train.metrics_path", "")
-    if not metrics_path:
+    if not metrics_path or snapshot is None:
         st.caption(t("common.no_runs", lang))
         return
 
-    snapshot = read_live_metrics(metrics_path)
     if snapshot.epochs_total:
         st.progress(snapshot.progress, text=f"{snapshot.epochs_completed}/{snapshot.epochs_total}")
 
@@ -151,6 +155,6 @@ def render(lang: Lang) -> None:
         st.markdown(train_help(lang))
 
     # Auto-refresh while training is alive — Streamlit reruns the whole script.
-    if running and not snapshot.done:
+    if running and not done:
         time.sleep(2.0)
         st.rerun()

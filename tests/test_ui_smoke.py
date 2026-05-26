@@ -17,7 +17,7 @@ streamlit_testing = pytest.importorskip("streamlit.testing.v1")
 AppTest = streamlit_testing.AppTest
 
 
-PAGES = ["home", "tray", "train", "evaluate", "predict", "settings"]
+PAGES = ["home", "tray", "train", "evaluate", "quantize", "predict", "settings"]
 
 
 def _driver_script(page: str, lang: str) -> str:
