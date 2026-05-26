@@ -146,6 +146,7 @@ def cmd_db(args: argparse.Namespace) -> int:
     """Centralized catalog: init/seed, migrate the manifest in, export, audit."""
     from almendra.db.audit import print_audit
     from almendra.db.catalog import default_db_path, get_engine, get_session, init_db
+    from almendra.db.curate import curate
     from almendra.db.export import export_manifest
     from almendra.db.migrate import migrate_manifest
     from almendra.db.seed import seed_all
@@ -181,6 +182,21 @@ def cmd_db(args: argparse.Namespace) -> int:
                 min_trust=args.min_trust,
             )
         print(f"manifest exported -> {out}")
+        return 0
+
+    if args.db_command == "curate":
+        with get_session(engine) as session:
+            summary = curate(
+                session,
+                dedup_threshold=args.dedup_threshold,
+                min_px=args.min_px,
+                min_stddev=args.min_stddev,
+                dry_run=args.dry_run,
+            )
+        tag = " (dry-run, nothing written)" if args.dry_run else ""
+        print(f"curation summary{tag}:")
+        for key, value in summary.items():
+            print(f"  {key:<22} {value}")
         return 0
 
     if args.db_command == "audit":
@@ -336,6 +352,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_db_exp.add_argument(
         "--min-trust", type=float, default=0.0, help="drop defect labels below this trust"
+    )
+    p_db_cur = db_sub.add_parser("curate", help="dedup + quality + lossy-label trust passes")
+    p_db_cur.add_argument("--dry-run", action="store_true", help="report without writing changes")
+    p_db_cur.add_argument(
+        "--dedup-threshold", type=int, default=4, help="max pHash Hamming distance for a duplicate"
+    )
+    p_db_cur.add_argument("--min-px", type=int, default=48, help="flag crops smaller than this")
+    p_db_cur.add_argument(
+        "--min-stddev", type=float, default=6.0, help="flag crops below this pixel std-dev"
     )
     db_sub.add_parser("audit", help="print a catalog health report")
     p_db.set_defaults(func=cmd_db)

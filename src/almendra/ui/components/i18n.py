@@ -233,6 +233,10 @@ _STRINGS: dict[str, dict[Lang, str]] = {
     "settings.title": {"es": "Ajustes", "en": "Settings"},
     "settings.taxonomy": {"es": "Taxonomía canónica", "en": "Canonical taxonomy"},
     "settings.sources": {"es": "Fuentes de datos", "en": "Data sources"},
+    "settings.sources_blocked": {
+        "es": "🔴 Fuentes bloqueadas por licencia (no se ingieren): {sources}",
+        "en": "🔴 License-blocked sources (not ingested): {sources}",
+    },
     "settings.config": {"es": "Configuración actual", "en": "Current config"},
     "settings.paths": {"es": "Rutas del proyecto", "en": "Project paths"},
 }

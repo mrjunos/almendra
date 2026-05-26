@@ -7,17 +7,17 @@ provenance, licence and how the data is used.
 
 A machine-readable adapter for each dataset lives in
 [`../../data/sources/`](../../data/sources/). A full prose datasheet is written
-when a dataset is actually ingested (Phase 1+).
+when a dataset is actually ingested.
 
 ## Licence & status summary
 
 | Dataset | Species | Licence | Commercial | Status |
 |---------|---------|---------|-----------|--------|
-| `roboflow_robusta_defects` | Robusta | CC BY 4.0 | Yes | Usable — Phase 1 baseline |
-| `usk_coffee` | Arabica | Public Domain | Yes | Usable — confirm host reachability |
-| `samruddhk_grading` | Robusta | MIT | Yes | Reference only (grades, not defects) |
-| `mendeley_cbd_robusta` | Robusta | CC BY 4.0 | Yes | Reference only (grades, not defects) |
-| `kaggle_17defects` | Arabica | Unknown | Unknown | **Blocked** — licence unverified |
+| [`roboflow_robusta_defects`](roboflow_robusta_defects.md) | Robusta | CC BY 4.0 | Yes | Usable — Phase 1 baseline (ingested) |
+| [`usk_coffee`](usk_coffee.md) | Arabica | Public Domain | Yes | Usable — confirm host reachability |
+| [`samruddhk_grading`](samruddhk_grading.md) | Robusta | MIT | Yes | Reference only (grades, not defects) |
+| [`mendeley_cbd_robusta`](mendeley_cbd_robusta.md) | Robusta | CC BY 4.0 | Yes | Reference only (grades, not defects) |
+| [`kaggle_17defects`](kaggle_17defects.md) | Arabica | Unknown | Unknown | **Blocked** — licence unverified |
 
 ## Known limitations of the public pool
 - **Robusta-heavy.** Most cleanly-licensed data is Robusta; the target crop is
