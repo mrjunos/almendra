@@ -40,6 +40,7 @@ _STRINGS: dict[str, dict[Lang, str]] = {
     "nav.evaluate": {"es": "📊 Evaluar", "en": "📊 Evaluate"},
     "nav.quantize": {"es": "⚡ Cuantizar", "en": "⚡ Quantize"},
     "nav.predict": {"es": "🚀 Predecir", "en": "🚀 Predict"},
+    "nav.browse": {"es": "🗃️ Datos", "en": "🗃️ Data"},
     "nav.settings": {"es": "⚙️ Ajustes", "en": "⚙️ Settings"},
     # --- home ---
     "home.title": {"es": "Inicio", "en": "Home"},
@@ -229,10 +230,36 @@ _STRINGS: dict[str, dict[Lang, str]] = {
     "predict.agreement_yes": {"es": "✅ Igual top-1", "en": "✅ Same top-1"},
     "predict.agreement_no": {"es": "⚠️ Difieren", "en": "⚠️ Differ"},
     "predict.latency": {"es": "Latencia", "en": "Latency"},
+    # --- browse (data explorer) ---
+    "browse.title": {"es": "Explorador de datos", "en": "Data browser"},
+    "browse.no_db": {
+        "es": "Aún no hay catálogo. Corre `almendra db migrate` para construirlo.",
+        "en": "No catalog yet. Run `almendra db migrate` to build it.",
+    },
+    "browse.f_source": {"es": "Fuente", "en": "Source"},
+    "browse.f_split": {"es": "Split", "en": "Split"},
+    "browse.f_class": {"es": "Defecto (primario)", "en": "Defect (primary)"},
+    "browse.f_provenance": {"es": "Procedencia", "en": "Provenance"},
+    "browse.f_quality": {"es": "Calidad", "en": "Quality"},
+    "browse.f_trust": {"es": "Confianza", "en": "Trust"},
+    "browse.empty": {
+        "es": "Ningún grano coincide con los filtros.",
+        "en": "No beans match the filters.",
+    },
+    "browse.page": {"es": "Página (de {pages})", "en": "Page (of {pages})"},
+    "browse.showing": {"es": "Mostrando {n} de {total}", "en": "Showing {n} of {total}"},
+    "browse.detail": {"es": "Detalle del grano", "en": "Bean detail"},
+    "browse.pick": {"es": "Elegir grano de esta página", "en": "Pick a bean from this page"},
+    "browse.defects": {"es": "Defectos", "en": "Defects"},
+    "browse.provenance": {"es": "Procedencia del lote", "en": "Lot provenance"},
     # --- settings ---
     "settings.title": {"es": "Ajustes", "en": "Settings"},
     "settings.taxonomy": {"es": "Taxonomía canónica", "en": "Canonical taxonomy"},
     "settings.sources": {"es": "Fuentes de datos", "en": "Data sources"},
+    "settings.sources_blocked": {
+        "es": "🔴 Fuentes bloqueadas por licencia (no se ingieren): {sources}",
+        "en": "🔴 License-blocked sources (not ingested): {sources}",
+    },
     "settings.config": {"es": "Configuración actual", "en": "Current config"},
     "settings.paths": {"es": "Rutas del proyecto", "en": "Project paths"},
 }
