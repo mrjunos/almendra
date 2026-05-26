@@ -13,6 +13,7 @@ import streamlit as st
 from almendra.ui.components.i18n import t
 from almendra.ui.components.state import current_lang, language_toggle
 from almendra.ui.views import (
+    page_browse,
     page_evaluate,
     page_home,
     page_predict,
@@ -60,6 +61,7 @@ def render_sidebar() -> str:
         "evaluate": t("nav.evaluate", lang),
         "quantize": t("nav.quantize", lang),
         "predict": t("nav.predict", lang),
+        "browse": t("nav.browse", lang),
         "settings": t("nav.settings", lang),
     }
     keys = list(pages.keys())
@@ -103,6 +105,8 @@ def main() -> None:
         page_quantize.render(lang)
     elif page == "predict":
         page_predict.render(lang)
+    elif page == "browse":
+        page_browse.render(lang)
     elif page == "settings":
         page_settings.render(lang)
 

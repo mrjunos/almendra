@@ -73,6 +73,7 @@ def test_full_flow(tmp_path: Path) -> None:
     from playwright.sync_api import expect, sync_playwright
 
     sandbox = harness.build_sandbox(tmp_path)
+    harness.build_catalog(sandbox)  # so the Data browser has beans to show
 
     # Synthetic side-A tray photo built from real crops.
     crops = _bean_crops()
@@ -145,6 +146,11 @@ def test_full_flow(tmp_path: Path) -> None:
             _wait_idle(page)
             page.locator('input[type="file"]').first.set_input_files(str(bean_png))
             expect(page.get_by_text("Agreement")).to_be_visible(timeout=60_000)
+
+            # 6) DATA BROWSER — sanity: the catalog renders with beans.
+            _nav(page, "Data")
+            expect(page.get_by_text("Data browser")).to_be_visible(timeout=30_000)
+            expect(page.get_by_text("Showing")).to_be_visible(timeout=30_000)
 
             video_path = page.video.path() if page.video else None
             context.close()  # flush the video to disk

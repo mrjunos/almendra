@@ -85,6 +85,19 @@ def start_ui(sandbox: Path, port: int) -> subprocess.Popen:
     )
 
 
+def build_catalog(sandbox: Path) -> None:
+    """Build the sandbox catalog from the fixture manifest (also exercises `db migrate`)."""
+    cmd = [sys.executable, "-m", "almendra.cli", "db", "migrate"]
+    subprocess.run(  # noqa: S603 — we build cmd ourselves
+        cmd,
+        cwd=str(sandbox),
+        env=sandbox_env(sandbox),
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+
+
 def wait_until_ready(port: int, timeout: float = 60.0) -> None:
     url = f"http://127.0.0.1:{port}/_stcore/health"
     deadline = time.time() + timeout
