@@ -57,6 +57,12 @@ capture = [
     # ArUco marker detection for the gridded-tray auto-segmentation pipeline.
     "opencv-contrib-python-headless>=4.9",
 ]
+catalog = [
+    # Centralized bean catalog (SQLite now, Postgres-portable via SQLModel).
+    "sqlmodel>=0.0.21",
+    # Perceptual-hash near-duplicate detection during curation.
+    "imagehash>=4.3",
+]
 ui = [
     # Local Streamlit UI (Phase 6) — runs the toolkit end-to-end for non-CLI users.
     "streamlit>=1.40",

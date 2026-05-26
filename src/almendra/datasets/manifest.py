@@ -9,7 +9,7 @@ single-view baseline.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 
@@ -19,12 +19,15 @@ class BeanRecord:
 
     bean_id: str
     source: str
-    defect_class: str
-    defect_index: int
+    defect_class: str  # primary (SCA most-severe) defect — back-compat single label
+    defect_index: int  # == primary defect index
     split: str  # train | val | test
     views: list[str]  # image paths relative to the processed root
     morphology: str = "normal"
     source_image: str = ""
+    # Multi-label: every defect on this bean (taxonomy indices). Empty/absent on
+    # legacy manifests → falls back to [defect_index] when read.
+    defects: list[int] = field(default_factory=list)
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False)
