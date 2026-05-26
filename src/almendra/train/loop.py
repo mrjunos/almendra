@@ -20,10 +20,10 @@ from omegaconf import OmegaConf
 from torch import nn
 from torch.utils.data import DataLoader
 
-from almendra.datasets.manifest import class_distribution, filter_split, read_manifest
+from almendra.datasets.manifest import filter_split, read_manifest
 from almendra.datasets.multiview import MultiViewBeanDataset
 from almendra.datasets.transforms import build_transforms
-from almendra.eval.metrics import compute_metrics
+from almendra.eval.metrics import DEFAULT_THRESHOLD, compute_metrics
 from almendra.models.classifier import build_model
 from almendra.paths import processed_dir
 from almendra.taxonomy import get_taxonomy
@@ -66,21 +66,24 @@ def resolve_device(name: str) -> torch.device:
     return torch.device("cpu")
 
 
-def class_weights(records, num_classes: int) -> torch.Tensor:
-    """Inverse-frequency loss weights over the classes present in the data.
+def pos_weights(records, num_classes: int, max_weight: float = 100.0) -> torch.Tensor:
+    """Per-class positive weights for BCE — counter the defect class imbalance.
 
-    Absent classes get weight 0: they never occur as a target, and a non-zero
-    weight would otherwise inflate the label-smoothing term of the loss. Present
-    weights are normalised to average ~1.
+    ``pos_weight[c] = n_negative / n_positive`` (clamped), the standard
+    ``BCEWithLogitsLoss`` knob that up-weights the rare positive class. Multi-hot
+    counting: a bean contributes a positive to every defect it carries. Absent
+    classes never occur as positives, so their weight is harmless.
     """
-    taxonomy = get_taxonomy()
     counts = torch.zeros(num_classes)
-    for name, count in class_distribution(records).items():
-        counts[taxonomy.index_of(name)] = count
-    present = counts > 0
-    weights = torch.zeros(num_classes)
-    weights[present] = counts[present].sum() / (counts[present] * present.sum())
-    return weights
+    total = 0
+    for rec in records:
+        total += 1
+        for idx in rec.defects or [rec.defect_index]:
+            if 0 <= idx < num_classes:
+                counts[idx] += 1
+    pos = counts.clamp(min=1.0)
+    neg = (total - counts).clamp(min=0.0)
+    return (neg / pos).clamp(max=max_weight)
 
 
 def _build_scheduler(optimizer, cfg, epochs: int):
@@ -144,8 +147,8 @@ def _validate(model, loader, device, num_classes: int) -> dict:
     preds, targets = [], []
     for views, labels in loader:
         logits = model(views.to(device))
-        preds.append(logits.argmax(1).cpu())
-        targets.append(labels)
+        preds.append((torch.sigmoid(logits) >= DEFAULT_THRESHOLD).int().cpu())
+        targets.append(labels.int())
     return compute_metrics(torch.cat(targets).numpy(), torch.cat(preds).numpy(), num_classes)
 
 
@@ -160,10 +163,9 @@ def run(cfg) -> Path:
     train_dl, val_dl, train_recs = _build_loaders(cfg)
     model = build_model(cfg.model, num_classes).to(device)
 
-    criterion = nn.CrossEntropyLoss(
-        weight=class_weights(train_recs, num_classes).to(device),
-        label_smoothing=cfg.train.loss.label_smoothing,
-    )
+    # Multi-label: independent per-class sigmoids + BCE, positive-weighted to
+    # counter defect imbalance (a bean may carry several defects).
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights(train_recs, num_classes).to(device))
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg.train.optimizer.lr,
