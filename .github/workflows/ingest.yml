@@ -1,0 +1,54 @@
+name: Ingest datasets
+
+# Manual-only: downloading from Roboflow/Kaggle/etc. needs credentials and is
+# wasteful on every push. Trigger from the Actions tab ("Run workflow"). The
+# Roboflow SDK reads ROBOFLOW_API_KEY from the repo secret of the same name.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Single source to download (blank = all eligible, license-blocked skipped)"
+        required: false
+        default: ""
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      # data → roboflow/hf/kaggle SDKs; capture → OpenCV crop; catalog → db migrate.
+      - name: Install (data + capture + catalog)
+        run: uv sync --extra data --extra capture --extra catalog
+
+      - name: Download + ingest into the catalog
+        env:
+          ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
+        run: |
+          if [ -z "$ROBOFLOW_API_KEY" ]; then
+            echo "::warning::ROBOFLOW_API_KEY secret is not set — Roboflow sources will be skipped."
+          fi
+          ARGS=""
+          if [ -n "${{ inputs.only }}" ]; then ARGS="--only ${{ inputs.only }}"; fi
+          uv run python scripts/download_public_datasets.py $ARGS
+          uv run almendra ingest
+          uv run almendra db migrate
+
+      - name: Catalog summary
+        run: uv run almendra db audit
+
+      # The runner is ephemeral and there is no DVC remote yet (ADR-0006), so the
+      # ingested data + catalog are uploaded as an artifact for inspection rather
+      # than persisted. Wire a DVC push here once a remote is chosen.
+      - name: Upload manifest + catalog
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog
+          path: |
+            data/processed/manifest.jsonl
+            data/catalog.db
+          if-no-files-found: warn
