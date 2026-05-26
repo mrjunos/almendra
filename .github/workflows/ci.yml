@@ -19,7 +19,7 @@ jobs:
       # so the UI smoke tests actually run. The `data` extra (roboflow, dvc) is
       # omitted: tests do not touch dataset downloads.
       - name: Install (core + dev + train + export + capture + ui)
-        run: uv sync --extra dev --extra train --extra export --extra capture --extra ui
+        run: uv sync --extra dev --extra train --extra export --extra capture --extra ui --extra catalog
 
       - name: Ruff lint
         run: uv run ruff check .
@@ -41,7 +41,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install (core + dev + train + export + capture + ui + e2e)
-        run: uv sync --extra dev --extra train --extra export --extra capture --extra ui --extra e2e
+        run: uv sync --extra dev --extra train --extra export --extra capture --extra ui --extra catalog --extra e2e
 
       - name: Install Chromium
         run: uv run playwright install --with-deps chromium
