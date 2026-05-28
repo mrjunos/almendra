@@ -1,0 +1,54 @@
+# Dataset adapter — Green Coffee Bean Defect (coffee-adik, Roboflow Universe)
+# Object detection; ~1,800 images, ~10 defect classes — the finest near-SCA
+# labels in the public pool. Ingested via the existing COCO detection ingester
+# (one bean per annotated bbox).
+name: coffee_adik_defects
+title: "Green Coffee Bean Defect (coffee-adik)"
+url: "https://universe.roboflow.com/coffee-adik/green-coffee-bean-defect-mb1qf"
+provider: roboflow
+
+# ⚠️ Confirm licence + commercial use on the dataset page on first download.
+# Roboflow Universe defaults to CC BY 4.0 but each project can override.
+license: "CC BY 4.0"
+commercial_use: true
+status: usable
+
+species: unspecified           # the page does not state Arabica vs Robusta clearly
+roast: green
+capture: controlled
+approx_images: 1800
+format: detection              # COCO object-detection export
+
+download:
+  method: roboflow
+  workspace: coffee-adik
+  project: green-coffee-bean-defect-mb1qf
+  version: 1                   # verify on first download (Roboflow versions are explicit)
+  format: coco
+  notes: "Needs a free Roboflow API key in ROBOFLOW_API_KEY."
+
+ingest:
+  crop: instances              # one bean per annotated bbox
+  task: defect
+
+# Source label -> canonical defect class. The dataset page lists ~10 classes
+# (black, broken, foreign, fraghusk, green, husk, immature, infested, sour, …).
+# ⚠️ Verify the EXACT class strings on first download and tighten ambiguous
+# mappings. `green` is ambiguous (immature vs unroasted state) — left as
+# `defect_unspecified` until the dataset's intent is confirmed.
+class_map:
+  black: full_black
+  broken: broken_chipped_cut
+  foreign: foreign_matter
+  fraghusk: hull_husk
+  green: defect_unspecified     # AMBIGUOUS — verify on first ingest
+  husk: hull_husk
+  immature: immature
+  infested: severe_insect_damage
+  sour: full_sour
+
+notes: >
+  Finer-grained labels than roboflow_robusta_defects and the best near-SCA
+  public set. Some lossy mappings expected; `db curate` will flag low-trust on
+  the `defect_unspecified` bucket. Confirm licence, species and the full class
+  list on first download — see docs/datasheets/.

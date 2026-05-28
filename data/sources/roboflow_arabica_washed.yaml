@@ -1,0 +1,44 @@
+# Dataset adapter — Arabica Washed (byne-gudda-estate, Roboflow Universe)
+# Instance segmentation of washed Arabica green beans. Multiple beans per image
+# → cropped to single beans via the existing COCO instance-segmentation
+# ingester. Adds Arabica appearance to a Robusta-heavy public pool.
+name: roboflow_arabica_washed
+title: "Arabica Washed (byne-gudda-estate)"
+url: "https://universe.roboflow.com/byne-gudda-estate/arabica-washed"
+provider: roboflow
+
+license: "CC BY 4.0"            # ⚠️ verify on first download
+commercial_use: true
+status: usable
+
+species: arabica
+roast: green
+capture: controlled
+approx_images: 0                # ⚠️ fill on first download
+format: instance_segmentation
+
+download:
+  method: roboflow
+  workspace: byne-gudda-estate
+  project: arabica-washed
+  version: 1                    # verify on first download
+  format: coco-segmentation
+  notes: "Needs ROBOFLOW_API_KEY."
+
+ingest:
+  crop: instances
+  task: appearance              # Arabica appearance reference, not defect supervision
+
+# The dataset segments beans but does not label individual defects, so every
+# annotated bean maps to `sound`. Useful for Arabica visual baseline; not a
+# strong defect signal. ⚠️ Confirm class name(s) on first download; if a real
+# defect axis appears, widen the map and tighten trust on import.
+class_map:
+  bean: sound
+  beans: sound                  # alternative spelling sometimes used
+
+notes: >
+  First reliably-licensed Arabica set we can ingest. Defects are NOT labelled
+  per-bean — beans here come in as `sound` and should be treated as low-trust
+  for the defect axis (use `db curate` rules if needed). Primary value is
+  Arabica appearance + validation of the crop-to-single-bean path.
