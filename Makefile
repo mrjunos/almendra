@@ -3,13 +3,13 @@
 # created by uv. Run `make help` for the full list.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-min lint format test e2e info train eval export bench sweep data ingest ui clean
+.PHONY: help setup setup-min lint format test e2e info train eval export bench sweep data ingest ui db-init db-migrate db-export db-curate db-audit clean
 
 SWEEP_BACKBONES ?= mobilenet_v3_small,mobilenet_v3_large,efficientnet_b0
 SWEEP_EPOCHS ?= 20
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 setup: ## Install the project with all extras (torch, onnx, dvc, dev)
@@ -57,8 +57,23 @@ bench: ## Benchmark inference latency / throughput
 sweep: ## Backbone sweep (override SWEEP_BACKBONES, SWEEP_EPOCHS)
 	uv run almendra sweep --backbones $(SWEEP_BACKBONES) --epochs $(SWEEP_EPOCHS) $(ARGS)
 
-ui: ## Launch the local Streamlit UI (Phase 6)
+ui: ## Launch the local Streamlit UI
 	uv run almendra ui $(ARGS)
+
+db-init: ## Initialise + seed the catalog (data/catalog.db)
+	uv run almendra db init
+
+db-migrate: ## Import data/processed/manifest.jsonl into the catalog (idempotent)
+	uv run almendra db migrate
+
+db-export: ## Export a training manifest from the catalog (ARGS for flags)
+	uv run almendra db export-manifest $(ARGS)
+
+db-curate: ## Curate the catalog — dedup + quality + lossy-label trust (ARGS for flags)
+	uv run almendra db curate $(ARGS)
+
+db-audit: ## Print a catalog health report
+	uv run almendra db audit
 
 clean: ## Remove build artifacts, caches and run outputs
 	rm -rf outputs mlruns .pytest_cache .ruff_cache dist build
